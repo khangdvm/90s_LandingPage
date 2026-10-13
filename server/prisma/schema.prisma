@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Room {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String   @default("")
+  price       Int
+  maxGuests   Int
+  beds        String   @default("")
+  viewType    String   @default("valley")
+  imageUrl    String   @default("")
+  count       Int      @default(0)
+  q           Int      @default(0)
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model HeroSlide {
+  id          String   @id @default(cuid())
+  eyebrow     String   @default("")
+  title       String
+  description String   @default("")
+  imageUrl    String   @default("")
+  badge       String   @default("")
+  ctaText     String   @default("")
+  ctaTarget   String   @default("")
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model News {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  category    String
+  title       String
+  excerpt     String   @default("")
+  content     String   @default("")
+  imageUrl    String   @default("")
+  href        String   @default("#")
+  publishedAt DateTime @default(now())
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isPublished, category, publishedAt])
+}
+
+model ContentCard {
+  id          String   @id @default(cuid())
+  section     String
+  title       String
+  subtitle    String   @default("")
+  description String   @default("")
+  imageUrl    String   @default("")
+  ctaText     String   @default("")
+  ctaTarget   String   @default("")
+  q           Int      @default(0)
+  dishes      String[] @default([])
+  sortOrder   Int      @default(0)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([section, isActive, sortOrder])
+}
+
+model SiteConfig {
+  key       String   @id
+  value     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
