@@ -1,12 +1,8 @@
 import { useState } from "react";
-import {
-  rooms,
-  viewNames,
-  money,
-  today,
-  nextDay,
-  displayDate,
-} from "../data/data.js";
+import { viewNames, money, today, nextDay, displayDate } from "../data/data.js";
+
+import ContentPhoto from "./ContentPhoto.jsx";
+import PublicState from "./PublicState.jsx";
 
 function Metadata({ room }) {
   return (
@@ -39,10 +35,10 @@ function Price({ room }) {
 }
 function Photo({ room, className = "" }) {
   return (
-    <span
-      className={`photo room-photo q${room.q} ${className}`}
-      role="img"
-      aria-label={`Ảnh minh họa ${room.name}`}
+    <ContentPhoto
+      item={room}
+      className={`room-photo ${className}`}
+      label={`Ảnh ${room.name}`}
     />
   );
 }
@@ -76,6 +72,7 @@ function RoomCard({ room, main = false, onRoom }) {
   );
 }
 export default function Rooms({
+  resource,
   filters,
   onView,
   onRoom,
@@ -83,6 +80,7 @@ export default function Rooms({
   onStay,
   onConsult,
 }) {
+  const rooms = resource.data || [];
   const list = rooms.filter(
     (room) =>
       (filters.view === "all" || filters.view === room.view) &&
@@ -128,7 +126,7 @@ export default function Rooms({
         aria-live="polite"
         hidden={filters.view === "all" && !filters.searched}
       >
-        {list.length} hạng phòng minh họa
+        {list.length} hạng phòng
         {filters.guests ? ` cho ${filters.guests} khách` : ""}
         {filters.searched
           ? ` · ${displayDate(filters.checkin)} – ${displayDate(filters.checkout)}`
@@ -139,7 +137,9 @@ export default function Rooms({
         id="room-layout"
         className={`room-layout ${list.length === 1 ? "single" : ""}`}
       >
-        {list.length ? (
+        {resource.loading || resource.error ? (
+          <PublicState resource={resource} label="phòng nghỉ" />
+        ) : list.length ? (
           <>
             <RoomCard room={list[0]} main onRoom={onRoom} />
             {list.length > 1 && (
@@ -152,7 +152,7 @@ export default function Rooms({
           </>
         ) : (
           <div className="empty-state">
-            Chưa có hạng phòng mẫu phù hợp. Nhóm đông có thể cần nhiều phòng.
+            Chưa có hạng phòng phù hợp. Nhóm đông có thể cần nhiều phòng.
             <br />
             <button className="text-link" onClick={() => onConsult()}>
               Trao đổi nhu cầu lưu trú
@@ -206,10 +206,12 @@ export function RoomDetails({ room, onConsult, onAllRooms }) {
     </>
   );
 }
-export function AllRooms({ onRoom }) {
+export function AllRooms({ rooms, onRoom }) {
   return (
     <>
-      <p>Thông tin và giá mẫu để anh/chị xem thử cách chọn phòng.</p>
+      <p>
+        Thông tin phòng và giá tham khảo để anh/chị trao đổi nhu cầu lưu trú.
+      </p>
       {rooms.map((room) => (
         <article key={room.id} className="all-room-card">
           <button

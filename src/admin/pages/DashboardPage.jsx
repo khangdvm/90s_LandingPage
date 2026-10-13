@@ -71,8 +71,8 @@ export default function DashboardPage() {
         </div>
       </section>
       <p className="cms-notice">
-        Các thay đổi được lưu vào CMS. Website công khai vẫn dùng dữ liệu hiện
-        tại và sẽ kết nối CMS ở giai đoạn tiếp theo.
+        Các thay đổi được lưu vào CMS. Website công khai hiển thị nội dung mới
+        khi tải lại trang; chỉ nội dung đang bật hoặc đã đăng mới xuất hiện.
       </p>
     </>
   );

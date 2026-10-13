@@ -398,15 +398,6 @@ h3 {
 .photo:hover {
   filter: brightness(1.03);
 }
-.room-photo {
-  background-image: url("/assets/images/rooms/rooms-collage.png");
-}
-.food-photo {
-  background-image: url("/assets/images/restaurant/food-collage.png");
-}
-.cafe-photo {
-  background-image: url("/assets/images/cafe/cafe-collage.png");
-}
 .q0 {
   background-position: 0% 0%;
 }
@@ -1646,4 +1637,70 @@ body:has(dialog[open]) {
 }
 .hero-title {
   white-space: pre-line;
+}
+
+/* CMS loading/error states; existing section layouts remain unchanged. */
+.public-state {
+  padding: 28px 16px;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.public-state .text-link {
+  margin-top: 12px;
+}
+.public-loading {
+  min-height: 180px;
+  background: #f6f7f8;
+  color: var(--gray);
+  border-radius: 5px;
+}
+.hero > .public-state {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+}
+#room-layout .public-state {
+  grid-column: 1 / -1;
+}
+.public-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cafe-layout a {
+  text-align: left;
+  display: block;
+  width: 100%;
+}
+.cafe-layout a.cafe-feature {
+  align-self: start;
+}
+.public-site :is(h2, h3, p, strong, a, button) {
+  overflow-wrap: anywhere;
+}
+#news-grid > .public-state {
+  grid-column: 1 / -1;
+}
+#room-layout .public-loading {
+  min-height: 420px;
+}
+#news-grid .public-loading {
+  min-height: 520px;
+}
+#nha-hang .public-loading {
+  min-height: 360px;
+}
+#ca-phe .public-loading {
+  min-height: 320px;
+}
+.article-photo {
+  height: auto;
+  width: 100%;
+  object-fit: cover;
+}
+
+.hero:has(> .public-state) {
+  background: #17312b;
+}
+.about-copy .text-link {
+  color: inherit;
 }

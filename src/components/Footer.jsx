@@ -1,7 +1,12 @@
-import { assetUrl, CONTACT_INFO } from "../data/data.js";
+import { assetUrl, externalUrl } from "../data/data.js";
 import { ContactLinks } from "./ConsultationModal.jsx";
 
+import { useSiteConfig } from "../data/SiteConfigContext.jsx";
+import PublicState from "./PublicState.jsx";
 export default function Footer({ onConsult, onInfo }) {
+  const resource = useSiteConfig();
+  const CONTACT_INFO = resource.data || {};
+  const map = externalUrl(CONTACT_INFO.mapUrl);
   return (
     <>
       <footer id="lien-he">
@@ -16,11 +21,16 @@ export default function Footer({ onConsult, onInfo }) {
               />
               <strong>90s Homestay · Tam Đảo</strong>
               <p>Lưu trú · Nhà hàng · Cà phê</p>
-              <p id="contact-location">Địa điểm: {CONTACT_INFO.location}</p>
+              <p id="contact-location">
+                Địa điểm: {CONTACT_INFO.address || "Chưa cập nhật"}
+              </p>
             </div>
             <div>
               <p className="eyebrow red">LIÊN HỆ</p>
               <button onClick={() => onConsult()}>Tư vấn phòng</button>
+              {(resource.loading || resource.error) && (
+                <PublicState resource={resource} label="thông tin liên hệ" />
+              )}
               <div id="footer-contacts">
                 <ContactLinks onPlaceholder={() => onConsult()} />
               </div>
@@ -29,7 +39,11 @@ export default function Footer({ onConsult, onInfo }) {
               </button>
               <a
                 id="map-link"
-                href={CONTACT_INFO.map}
+                href={map || "#"}
+                aria-disabled={!map || undefined}
+                onClick={(event) => {
+                  if (!map) event.preventDefault();
+                }}
                 target="_blank"
                 rel="noopener noreferrer"
               >

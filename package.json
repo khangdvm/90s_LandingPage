@@ -10,7 +10,9 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test:admin": "playwright test"
+    "test:admin": "playwright test tests/admin.spec.js",
+    "test:public": "playwright test tests/public.spec.js",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "react": "^19.2.0",

@@ -495,13 +495,14 @@ test("mobile/tablet/desktop admin pages and forms do not overflow", async ({
       });
   }
 });
-test("public frontend remains local, usable and visually separate", async ({
+test("public frontend reads CMS, remains usable and visually separate", async ({
   page,
 }) => {
   await login(page);
   const requests = [];
   page.on("request", (r) => {
-    if (r.url().includes("/api/")) requests.push(r.url());
+    if (r.url().includes("/api/") && !r.url().includes("/api/admin/"))
+      requests.push({ url: r.url(), authorization: r.headers().authorization });
   });
   await page.getByRole("link", { name: "Xem website ↗", exact: true }).click();
   await expect(page).toHaveURL("/");
@@ -521,5 +522,10 @@ test("public frontend remains local, usable and visually separate", async ({
       exact: false,
     }),
   ).toBeVisible();
-  expect(requests).toEqual([]);
+  expect(requests.some((request) => request.url.endsWith("/api/rooms"))).toBe(
+    true,
+  );
+  expect(requests.every((request) => request.authorization === undefined)).toBe(
+    true,
+  );
 });

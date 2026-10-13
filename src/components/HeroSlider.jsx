@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { HERO_SLIDES, assetUrl } from "../data/data.js";
+import { assetUrl, contentTarget, externalUrl } from "../data/data.js";
 
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(
@@ -15,7 +15,10 @@ export function useReducedMotion() {
   return reduced;
 }
 
-export default function HeroSlider({ onConsult, reducedMotion }) {
+import PublicState from "./PublicState.jsx";
+
+export default function HeroSlider({ resource, onConsult, reducedMotion }) {
+  const slides = resource.data || [];
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -24,7 +27,7 @@ export default function HeroSlider({ onConsult, reducedMotion }) {
   const [interaction, setInteraction] = useState(0);
   const [status, setStatus] = useState("");
   const touch = useRef(null);
-  const count = HERO_SLIDES.length;
+  const count = slides.length;
 
   useEffect(() => {
     const update = () => setVisible(!document.hidden);
@@ -55,9 +58,21 @@ export default function HeroSlider({ onConsult, reducedMotion }) {
     const next = (index + count) % count;
     setCurrent(next);
     setInteraction((value) => value + 1);
-    setStatus(`Slide ${next + 1} / ${count}: ${HERO_SLIDES[next].eyebrow}`);
+    setStatus(`Slide ${next + 1} / ${count}: ${slides[next].eyebrow}`);
   }
-  if (!count) return null;
+  useEffect(() => {
+    setCurrent((value) => (count ? Math.min(value, count - 1) : 0));
+  }, [count]);
+  if (!count)
+    return (
+      <section className="hero" aria-label="Giới thiệu và chiến dịch">
+        <PublicState
+          resource={resource}
+          label="giới thiệu"
+          empty={!resource.loading && !resource.error}
+        />
+      </section>
+    );
   const stopped = paused || reducedMotion;
   return (
     <section
@@ -95,7 +110,7 @@ export default function HeroSlider({ onConsult, reducedMotion }) {
       }}
     >
       <div id="hero-slides">
-        {HERO_SLIDES.map((slide, index) => (
+        {slides.map((slide, index) => (
           <article
             key={slide.id}
             className={`hero-slide ${current === index ? "active" : ""}`}
@@ -104,12 +119,14 @@ export default function HeroSlider({ onConsult, reducedMotion }) {
             aria-roledescription="slide"
             aria-label={`${index + 1} / ${count}`}
           >
-            <img
-              src={assetUrl(slide.image)}
-              alt="Khung cảnh Tam Đảo — ảnh minh họa từ demo"
-              fetchPriority={index === 0 ? "high" : "auto"}
-              loading={index === 0 ? "eager" : "lazy"}
-            />
+            {assetUrl(slide.image) && (
+              <img
+                src={assetUrl(slide.image)}
+                alt="Khung cảnh Tam Đảo — ảnh minh họa từ demo"
+                fetchPriority={index === 0 ? "high" : "auto"}
+                loading={index === 0 ? "eager" : "lazy"}
+              />
+            )}
             <div className="hero-content">
               <p className="eyebrow">{slide.eyebrow}</p>
               {slide.badge && (
@@ -120,7 +137,13 @@ export default function HeroSlider({ onConsult, reducedMotion }) {
               {slide.ctaText && (
                 <a
                   className="button ghost"
-                  href={slide.ctaTarget || "#lien-he"}
+                  href={contentTarget(slide.ctaTarget) || "#lien-he"}
+                  target={externalUrl(slide.ctaTarget) ? "_blank" : undefined}
+                  rel={
+                    externalUrl(slide.ctaTarget)
+                      ? "noopener noreferrer"
+                      : undefined
+                  }
                   onClick={(event) => {
                     if ((slide.ctaTarget || "#lien-he") === "#lien-he") {
                       event.preventDefault();
@@ -145,7 +168,7 @@ export default function HeroSlider({ onConsult, reducedMotion }) {
           ‹
         </button>
         <div id="hero-dots" role="group" aria-label="Chọn slide">
-          {HERO_SLIDES.map((slide, index) => (
+          {slides.map((slide, index) => (
             <button
               key={slide.id}
               data-slide={index}

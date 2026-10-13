@@ -1,11 +1,9 @@
-import { foods } from "../data/data.js";
-
-export default function Restaurant({ onMenu, onConsult }) {
-  const subtitles = {
-    grill: "Thơm ngon khó cưỡng",
-    meal: "Hương vị thân quen",
-    greens: "Tươi ngon từ cao nguyên",
-  };
+import ContentPhoto from "./ContentPhoto.jsx";
+import ContentAction from "./ContentAction.jsx";
+import PublicState from "./PublicState.jsx";
+export default function Restaurant({ resource, onMenu, onConsult }) {
+  const cards = resource.data || [];
+  const feature = cards[0];
   return (
     <section id="nha-hang" className="dining section">
       <div className="container">
@@ -21,7 +19,8 @@ export default function Restaurant({ onMenu, onConsult }) {
             <button
               className="button outline"
               id="open-menu"
-              onClick={() => onMenu("hotpot")}
+              disabled={!feature}
+              onClick={() => onMenu(feature)}
             >
               Xem thực đơn
             </button>
@@ -33,75 +32,90 @@ export default function Restaurant({ onMenu, onConsult }) {
             </button>
           </div>
         </div>
-        <div className="food-layout">
-          <div className="food-list">
-            {["grill", "meal", "greens"].map((key) => (
-              <button
-                key={key}
-                className="food-item"
-                data-food={key}
-                onClick={() => onMenu(key)}
-              >
-                <span
-                  className={`photo food-photo q${foods[key].q}`}
-                  role="img"
-                  aria-label={`${foods[key].name} — ảnh minh họa`}
-                />
-                <span>
-                  <strong>{foods[key].name}</strong>
-                  <small>{subtitles[key]}</small>
-                  <span className="red action-label">Khám phá món</span>
-                </span>
-              </button>
-            ))}
+        {resource.loading || resource.error || !feature ? (
+          <PublicState resource={resource} label="nhà hàng" empty={!feature} />
+        ) : (
+          <div className="food-layout">
+            <div className="food-list">
+              {cards.slice(1).map((card) => (
+                <ContentAction
+                  key={card.id}
+                  card={card}
+                  defaultTarget="#nha-hang"
+                  className="food-item"
+                  data-food={card.id}
+                  onDetail={() => onMenu(card)}
+                  onConsult={() => onConsult(null, "table")}
+                >
+                  <ContentPhoto
+                    item={card}
+                    className="food-photo"
+                    label={`Ảnh ${card.title}`}
+                  />
+                  <span>
+                    <strong>{card.title}</strong>
+                    <small>{card.subtitle}</small>
+                    <span className="red action-label">
+                      {card.ctaText || "Khám phá món"}
+                    </span>
+                  </span>
+                </ContentAction>
+              ))}
+            </div>
+            <ContentAction
+              card={feature}
+              defaultTarget="#nha-hang"
+              className="food-feature"
+              data-food={feature.id}
+              onDetail={() => onMenu(feature)}
+              onConsult={() => onConsult(null, "table")}
+            >
+              <ContentPhoto
+                item={feature}
+                className="food-photo"
+                label={`Ảnh ${feature.title}`}
+              />
+              <strong>{feature.title}</strong>
+              <small>{feature.subtitle}</small>
+              {feature.ctaText && (
+                <span className="red action-label">{feature.ctaText}</span>
+              )}
+            </ContentAction>
           </div>
-          <button
-            className="food-feature"
-            data-food="hotpot"
-            onClick={() => onMenu("hotpot")}
-          >
-            <span
-              className="photo food-photo q0"
-              role="img"
-              aria-label="Bàn lẩu ấm cúng minh họa"
-            />
-            <strong>Lẩu nóng, quây quần cùng nhau.</strong>
-            <small>Một bữa ăn ấm cúng sau ngày dài khám phá.</small>
-          </button>
-        </div>
+        )}
         <p className="demo-note">Hình ảnh và thực đơn minh họa cho bản demo.</p>
       </div>
     </section>
   );
 }
-export function MenuDetail({ foodKey, onMenu, onConsult }) {
-  const food = foods[foodKey] || foods.hotpot;
+export function MenuDetail({ card, cards, onMenu, onConsult }) {
   return (
     <>
       <div className="modal-menu-tabs" role="group" aria-label="Nhóm món">
-        {Object.entries(foods).map(([key, item]) => (
+        {cards.map((item) => (
           <button
-            key={key}
-            data-food={key}
-            className={`filter ${key === foodKey ? "active" : ""}`}
-            aria-pressed={key === foodKey}
-            onClick={() => onMenu(key)}
+            key={item.id}
+            data-food={item.id}
+            className={`filter ${item.id === card.id ? "active" : ""}`}
+            aria-pressed={item.id === card.id}
+            onClick={() => onMenu(item)}
           >
-            {item.name}
+            {item.title}
           </button>
         ))}
       </div>
       <div className="menu-detail">
-        <div
-          className={`photo food-photo q${food.q} menu-detail-photo`}
-          role="img"
-          aria-label="Ảnh món ăn minh họa"
+        <ContentPhoto
+          item={card}
+          className="food-photo menu-detail-photo"
+          label={`Ảnh ${card.title}`}
+          as="div"
         />
-        <h3>{food.name}</h3>
-        <p>{food.description}</p>
+        <h3>{card.title}</h3>
+        <p className="public-text">{card.description}</p>
         <ul className="menu-dishes">
-          {food.dishes.map((name) => (
-            <li key={name}>
+          {card.dishes.map((name, index) => (
+            <li key={`${name}-${index}`}>
               {name}
               <span>Giá cập nhật sau</span>
             </li>

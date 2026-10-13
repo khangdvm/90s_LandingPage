@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CONTACT_INFO, displayDate, money } from "../data/data.js";
+import { displayDate, money, externalUrl } from "../data/data.js";
 
 export function Modal({ open, title, onDismiss, fallbackRef, children }) {
   const dialog = useRef(null);
@@ -64,18 +64,30 @@ export function Modal({ open, title, onDismiss, fallbackRef, children }) {
     </dialog>
   );
 }
+import { useSiteConfig } from "../data/SiteConfigContext.jsx";
+export function contactHref(key, value) {
+  if (typeof value !== "string" || !value || value.startsWith("PLACEHOLDER_"))
+    return "";
+  if (key === "hotline")
+    return /^\+?[\d ()-]{3,30}$/.test(value)
+      ? `tel:${value.replace(/[ ()-]/g, "")}`
+      : "";
+  return externalUrl(value);
+}
 export function ContactLinks({ onPlaceholder }) {
+  const CONTACT_INFO = useSiteConfig().data || {};
   return [
-    ["zalo", "Chat Zalo", CONTACT_INFO.zalo],
-    ["facebook", "Facebook", CONTACT_INFO.facebook],
+    ["zalo", "Chat Zalo", CONTACT_INFO.zaloUrl],
+    ["facebook", "Facebook", CONTACT_INFO.facebookUrl],
     ["hotline", "Gọi Hotline", CONTACT_INFO.hotline],
   ].map(([key, label, value]) => {
-    const placeholder = value.startsWith("PLACEHOLDER_");
+    const href = contactHref(key, value);
+    const placeholder = !href;
     return (
       <a
         key={key}
         className="button outline"
-        href={key === "hotline" ? `tel:${value}` : value}
+        href={href || "#"}
         target={key === "hotline" ? undefined : "_blank"}
         rel={key === "hotline" ? undefined : "noopener noreferrer"}
         aria-disabled={placeholder || undefined}
@@ -94,6 +106,7 @@ export function ContactLinks({ onPlaceholder }) {
 }
 export default function ConsultationModal({ room, type = "room", filters }) {
   const [message, setMessage] = useState("");
+  const CONTACT_INFO = useSiteConfig().data || {};
   return (
     <>
       <p>
@@ -121,15 +134,17 @@ export default function ConsultationModal({ room, type = "room", filters }) {
         <ContactLinks
           onPlaceholder={() =>
             setMessage(
-              "Kênh liên hệ chưa được cập nhật. Đây là placeholder của bản mẫu.",
+              "Thông tin liên hệ đang được cập nhật. Vui lòng thử lại sau.",
             )
           }
         />
       </div>
       <p className="form-notice">
-        {[CONTACT_INFO.hotline, CONTACT_INFO.zalo, CONTACT_INFO.facebook].some(
-          (value) => value.startsWith("PLACEHOLDER_"),
-        )
+        {[
+          contactHref("hotline", CONTACT_INFO.hotline),
+          contactHref("zalo", CONTACT_INFO.zaloUrl),
+          contactHref("facebook", CONTACT_INFO.facebookUrl),
+        ].some((value) => !value)
           ? "Thông tin liên hệ đang chờ cập nhật chính thức. "
           : ""}
         Giao diện này không gửi yêu cầu tự động. Hãy chia sẻ nhu cầu với nhân

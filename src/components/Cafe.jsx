@@ -1,22 +1,29 @@
-import { cafeNames, cafeDescriptions } from "../data/data.js";
-
-function CafeCard({ index, className = "", onCafe }) {
+import ContentPhoto from "./ContentPhoto.jsx";
+import ContentAction from "./ContentAction.jsx";
+import PublicState from "./PublicState.jsx";
+function CafeCard({ card, className = "", onCafe, onConsult }) {
   return (
-    <button
+    <ContentAction
+      card={card}
+      defaultTarget="#ca-phe"
       className={className}
-      data-cafe={index}
-      onClick={() => onCafe(index)}
+      data-cafe={card.id}
+      onDetail={() => onCafe(card)}
+      onConsult={() => onConsult()}
     >
-      <span
-        className={`photo cafe-photo q${index}`}
-        role="img"
-        aria-label={`${cafeNames[index]} — ảnh ý tưởng cà phê`}
+      <ContentPhoto
+        item={card}
+        className="cafe-photo"
+        label={`Ảnh ${card.title}`}
       />
-      <strong>{cafeNames[index]}</strong>
-    </button>
+      <strong>{card.title}</strong>
+      {card.subtitle && <small>{card.subtitle}</small>}
+      {card.ctaText && <span className="red action-label">{card.ctaText}</span>}
+    </ContentAction>
   );
 }
-export default function Cafe({ onCafe }) {
+export default function Cafe({ resource, onCafe, onConsult }) {
+  const cards = resource.data || [];
   return (
     <section id="ca-phe" className="section container">
       <div className="section-head">
@@ -28,43 +35,59 @@ export default function Cafe({ onCafe }) {
           </p>
         </div>
       </div>
-      <div className="cafe-layout">
-        <CafeCard index={0} className="cafe-feature" onCafe={onCafe} />
-        <div className="cafe-side">
-          <CafeCard index={1} onCafe={onCafe} />
-          <CafeCard index={2} onCafe={onCafe} />
+      {resource.loading || resource.error || !cards.length ? (
+        <PublicState resource={resource} label="cà phê" empty={!cards.length} />
+      ) : (
+        <div className="cafe-layout">
+          <CafeCard
+            card={cards[0]}
+            className="cafe-feature"
+            onCafe={onCafe}
+            onConsult={onConsult}
+          />
+          <div className="cafe-side">
+            {cards.slice(1).map((card) => (
+              <CafeCard
+                card={card}
+                key={card.id}
+                onCafe={onCafe}
+                onConsult={onConsult}
+              />
+            ))}
+          </div>
         </div>
-      </div>
+      )}
       <p className="demo-note">
         Hình ảnh ý tưởng · Thông tin khai trương sẽ được cập nhật.
       </p>
     </section>
   );
 }
-export function CafeDetail({ index, onCafe }) {
+export function CafeDetail({ card, cards, onCafe }) {
   return (
     <>
-      <div
-        className={`photo cafe-photo q${index} modal-room-photo`}
-        role="img"
-        aria-label="Ảnh ý tưởng cà phê"
+      <ContentPhoto
+        item={card}
+        className="cafe-photo modal-room-photo"
+        label={`Ảnh ${card.title}`}
+        as="div"
       />
       <p className="eyebrow red">CÀ PHÊ · SẮP RA MẮT</p>
-      <p>{cafeDescriptions[index]}</p>
+      <p className="public-text">{card.description}</p>
       <div className="form-notice">
         Hình ảnh ý tưởng. Không gian, menu và lịch khai trương sẽ được cập nhật
         khi có thông tin chính thức.
       </div>
       <div className="modal-menu-tabs">
-        {cafeNames.map((name, i) => (
+        {cards.map((item) => (
           <button
-            key={name}
-            data-cafe={i}
-            className={`filter ${i === index ? "active" : ""}`}
-            aria-pressed={i === index}
-            onClick={() => onCafe(i)}
+            key={item.id}
+            data-cafe={item.id}
+            className={`filter ${item.id === card.id ? "active" : ""}`}
+            aria-pressed={item.id === card.id}
+            onClick={() => onCafe(item)}
           >
-            {name}
+            {item.title}
           </button>
         ))}
       </div>

@@ -5,7 +5,12 @@ import request from "supertest";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { createApp } from "../src/app.js";
-import * as frontend from "../../src/data/data.js";
+import {
+  DEMO_ROOMS,
+  DEMO_HERO_SLIDES,
+  DEMO_NEWS_DATA,
+  DEMO_CONTACT_INFO,
+} from "../../src/data/demoFixtures.js";
 import {
   snapshot,
   roomData,
@@ -31,41 +36,46 @@ test(
         await db[model].deleteMany({ where: { id } });
       await db.$disconnect();
     });
-    await t.test("seed corresponds to frontend; password hashing", async () => {
-      assert.deepEqual(snapshot.rooms, frontend.rooms);
-      assert.deepEqual(snapshot.heroSlides, frontend.HERO_SLIDES);
-      assert.deepEqual(snapshot.news, frontend.NEWS_DATA);
-      assert.deepEqual(snapshot.contact, frontend.CONTACT_INFO);
-      for (const [model, rows] of [
-        ["room", roomData],
-        ["heroSlide", heroData],
-        ["news", newsData],
-        ["contentCard", contentData],
-      ]) {
-        assert.equal(await db[model].count(), rows.length);
-        for (const row of rows) {
-          const actual = await db[model].findUnique({ where: { id: row.id } });
-          for (const [key, value] of Object.entries(row))
-            assert.deepEqual(actual[key], value, `${model}.${key}`);
+    await t.test(
+      "seed corresponds to original demo fixtures; password hashing",
+      async () => {
+        assert.deepEqual(snapshot.rooms, DEMO_ROOMS);
+        assert.deepEqual(snapshot.heroSlides, DEMO_HERO_SLIDES);
+        assert.deepEqual(snapshot.news, DEMO_NEWS_DATA);
+        assert.deepEqual(snapshot.contact, DEMO_CONTACT_INFO);
+        for (const [model, rows] of [
+          ["room", roomData],
+          ["heroSlide", heroData],
+          ["news", newsData],
+          ["contentCard", contentData],
+        ]) {
+          assert.equal(await db[model].count(), rows.length);
+          for (const row of rows) {
+            const actual = await db[model].findUnique({
+              where: { id: row.id },
+            });
+            for (const [key, value] of Object.entries(row))
+              assert.deepEqual(actual[key], value, `${model}.${key}`);
+          }
         }
-      }
-      assert.deepEqual(
-        Object.fromEntries(
-          (await db.siteConfig.findMany()).map((x) => [x.key, x.value]),
-        ),
-        configData,
-      );
-      const admin = await db.admin.findUnique({
-        where: { email: process.env.SEED_ADMIN_EMAIL },
-      });
-      assert.notEqual(admin.passwordHash, process.env.SEED_ADMIN_PASSWORD);
-      assert.ok(
-        await bcrypt.compare(
-          process.env.SEED_ADMIN_PASSWORD,
-          admin.passwordHash,
-        ),
-      );
-    });
+        assert.deepEqual(
+          Object.fromEntries(
+            (await db.siteConfig.findMany()).map((x) => [x.key, x.value]),
+          ),
+          configData,
+        );
+        const admin = await db.admin.findUnique({
+          where: { email: process.env.SEED_ADMIN_EMAIL },
+        });
+        assert.notEqual(admin.passwordHash, process.env.SEED_ADMIN_PASSWORD);
+        assert.ok(
+          await bcrypt.compare(
+            process.env.SEED_ADMIN_PASSWORD,
+            admin.passwordHash,
+          ),
+        );
+      },
+    );
     await t.test("health and admin authentication", async () => {
       await request(app).get("/api/health").expect(200, { status: "ok" });
       await request(app)

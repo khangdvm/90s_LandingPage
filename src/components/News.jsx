@@ -1,33 +1,48 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, Fragment } from "react";
 import {
-  NEWS_DATA,
   NEWS_PAGE_SIZE,
   displayDate,
   assetUrl,
+  contentTarget,
+  externalUrl,
 } from "../data/data.js";
-
+import { publicApi } from "../api/publicApi.js";
+import { usePublicResource } from "../hooks/usePublicResource.js";
+import PublicState from "./PublicState.jsx";
 export default function News({ onArticle }) {
-  const [category, setCategory] = useState("90s");
-  const [page, setPage] = useState(1);
-  const activePage = useRef(null);
-  const shouldFocus = useRef(false);
-  const articles = NEWS_DATA.filter((item) => item.category === category);
-  const count = Math.ceil(articles.length / NEWS_PAGE_SIZE);
-  const displayed = articles.slice(
-    (page - 1) * NEWS_PAGE_SIZE,
-    page * NEWS_PAGE_SIZE,
+  const [category, setCategory] = useState("90s"),
+    [page, setPage] = useState(1);
+  const activePage = useRef(null),
+    shouldFocus = useRef(false);
+  const loader = useCallback(
+    (signal) =>
+      publicApi.news({ category, page, limit: NEWS_PAGE_SIZE }, signal),
+    [category, page],
   );
+  const resource = usePublicResource(loader);
+  const displayed = resource.data?.data || [];
+  const pagination = resource.data?.pagination;
+  const count = pagination?.totalPages || 0;
   useEffect(() => {
-    if (shouldFocus.current) {
+    if (pagination && page > Math.max(1, count)) setPage(Math.max(1, count));
+  }, [pagination, page, count]);
+  useEffect(() => {
+    if (shouldFocus.current && !resource.loading) {
       activePage.current?.focus({ preventScroll: true });
       shouldFocus.current = false;
     }
-  }, [page]);
+  }, [page, resource.loading]);
   function goToPage(next) {
     if (next < 1 || next > count || next === page) return;
     shouldFocus.current = true;
     setPage(next);
   }
+  const pages =
+    count <= 7
+      ? Array.from({ length: count }, (_, i) => i + 1)
+      : [...new Set([1, page - 1, page, page + 1, count])]
+          .filter((value) => value >= 1 && value <= count)
+          .sort((a, b) => a - b);
   return (
     <section
       id="tin-tuc"
@@ -39,8 +54,7 @@ export default function News({ onArticle }) {
           <p className="eyebrow red">TIN TỨC</p>
           <h2 id="news-title">Chuyện ở 90s & Tam Đảo.</h2>
           <p className="section-description">
-            Nội dung mẫu để duyệt giao diện; bài viết chính thức sẽ được cập
-            nhật.
+            Câu chuyện từ 90s và những trải nghiệm ở Tam Đảo.
           </p>
         </div>
       </div>
@@ -56,8 +70,8 @@ export default function News({ onArticle }) {
         ].map(([value, label]) => (
           <button
             key={value}
-            data-category={value}
             className={`filter ${category === value ? "active" : ""}`}
+            data-category={value}
             aria-pressed={category === value}
             onClick={() => {
               setCategory(value);
@@ -69,27 +83,43 @@ export default function News({ onArticle }) {
         ))}
       </div>
       <p id="news-status" className="demo-note" aria-live="polite">
-        {articles.length} bài mẫu · Trang {page} / {Math.max(1, count)}
+        {pagination
+          ? `${pagination.total} bài viết · Trang ${pagination.page} / ${Math.max(1, count)}`
+          : resource.loading
+            ? "Đang tải tin tức…"
+            : "Tin tức hiện chưa khả dụng."}
       </p>
-      <div id="news-grid" className="news-grid">
-        {displayed.length ? (
+      <div id="news-grid" className="news-grid" aria-busy={resource.loading}>
+        {resource.loading || resource.error ? (
+          <PublicState resource={resource} label="tin tức" />
+        ) : displayed.length ? (
           displayed.map((item) => (
             <article key={item.id} className="news-card">
-              <img
-                src={assetUrl(item.image)}
-                alt="Ảnh minh họa Tam Đảo cho bài mẫu"
-                loading="lazy"
-                width="600"
-                height="400"
-              />
+              {assetUrl(item.image) ? (
+                <img
+                  src={assetUrl(item.image)}
+                  alt={item.title}
+                  loading="lazy"
+                  width="600"
+                  height="400"
+                />
+              ) : (
+                <div className="photo" aria-hidden="true" />
+              )}
               <div className="news-copy">
                 <time dateTime={item.publishedAt}>
-                  Ngày mẫu: {displayDate(item.publishedAt)}
+                  Ngày đăng: {displayDate(item.publishedAt)}
                 </time>
                 <h3>{item.title}</h3>
                 <p>{item.excerpt}</p>
-                {item.href && item.href !== "#" ? (
-                  <a className="text-link" href={item.href}>
+                {contentTarget(item.href) ? (
+                  <a
+                    className="text-link"
+                    href={contentTarget(item.href)}
+                    {...(externalUrl(item.href)
+                      ? { target: "_blank", rel: "noopener noreferrer" }
+                      : {})}
+                  >
                     Đọc thêm
                   </a>
                 ) : (
@@ -124,18 +154,22 @@ export default function News({ onArticle }) {
           >
             Trước
           </button>
-          {Array.from({ length: count }, (_, index) => (
-            <button
-              key={index}
-              ref={index + 1 === page ? activePage : null}
-              data-page={index + 1}
-              className={`filter ${index + 1 === page ? "active" : ""}`}
-              aria-current={index + 1 === page ? "page" : undefined}
-              aria-label={`Trang ${index + 1}`}
-              onClick={() => goToPage(index + 1)}
-            >
-              {index + 1}
-            </button>
+          {pages.map((value, index) => (
+            <Fragment key={value}>
+              {index > 0 && value > pages[index - 1] + 1 && (
+                <span aria-hidden="true">…</span>
+              )}
+              <button
+                ref={value === page ? activePage : null}
+                data-page={value}
+                className={`filter ${value === page ? "active" : ""}`}
+                aria-current={value === page ? "page" : undefined}
+                aria-label={`Trang ${value}`}
+                onClick={() => goToPage(value)}
+              >
+                {value}
+              </button>
+            </Fragment>
           ))}
           <button
             className="filter"

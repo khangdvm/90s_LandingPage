@@ -1,21 +1,36 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import HeroSlider, { useReducedMotion } from "./components/HeroSlider.jsx";
 import About from "./components/About.jsx";
-import Rooms, {
-  RoomDetails,
-  AllRooms,
-  ExpectedStay,
-} from "./components/Rooms.jsx";
+import Rooms, { AllRooms, ExpectedStay } from "./components/Rooms.jsx";
 import Restaurant, { MenuDetail } from "./components/Restaurant.jsx";
 import Cafe, { CafeDetail } from "./components/Cafe.jsx";
 import Offers, { OffersDetail } from "./components/Offers.jsx";
 import News from "./components/News.jsx";
 import ConsultationModal, { Modal } from "./components/ConsultationModal.jsx";
 import Footer, { DemoInfo } from "./components/Footer.jsx";
-import { today, nextDay, cafeNames } from "./data/data.js";
+import { today, nextDay } from "./data/data.js";
+
+import { publicApi } from "./api/publicApi.js";
+import { usePublicResource } from "./hooks/usePublicResource.js";
+import { SiteConfigContext } from "./data/SiteConfigContext.jsx";
+import { RoomDetail, ArticleDetail } from "./components/PublicDetails.jsx";
 
 export default function App() {
+  const roomResource = usePublicResource(publicApi.rooms);
+  const heroResource = usePublicResource(publicApi.heroSlides);
+  const restaurantResource = usePublicResource(publicApi.restaurant);
+  const cafeResource = usePublicResource(publicApi.cafe);
+  const promotionResource = usePublicResource(publicApi.promotion);
+  const experienceResource = usePublicResource(publicApi.experience);
+  const siteConfig = usePublicResource(publicApi.siteConfig);
+  useEffect(() => {
+    if (!siteConfig.data) return;
+    document.title = siteConfig.data.siteTitle || "90s Homestay";
+    document
+      .querySelector('meta[name="description"]')
+      ?.setAttribute("content", siteConfig.data.siteDescription || "");
+  }, [siteConfig.data]);
   const [filters, setFilters] = useState(() => ({
     view: "all",
     guests: 0,
@@ -31,16 +46,15 @@ export default function App() {
   const onRoom = (room) => setModal({ kind: "room", title: room.name, room });
   const onAllRooms = () =>
     setModal({ kind: "all-rooms", title: "Các hạng phòng tại 90s" });
-  const onMenu = (foodKey = "hotpot") =>
-    setModal({ kind: "menu", title: "Thực đơn tại 90s", foodKey });
-  const onCafe = (index) =>
-    setModal({ kind: "cafe", title: cafeNames[index], index });
+  const onMenu = (card) =>
+    setModal({ kind: "menu", title: "Thực đơn tại 90s", card });
+  const onCafe = (card) => setModal({ kind: "cafe", title: card.title, card });
   const onDismiss = () => setModal(null);
   let content = null;
   switch (modal?.kind) {
     case "room":
       content = (
-        <RoomDetails
+        <RoomDetail
           room={modal.room}
           onConsult={onConsult}
           onAllRooms={onAllRooms}
@@ -48,7 +62,7 @@ export default function App() {
       );
       break;
     case "all-rooms":
-      content = <AllRooms onRoom={onRoom} />;
+      content = <AllRooms rooms={roomResource.data || []} onRoom={onRoom} />;
       break;
     case "stay":
       content = (
@@ -82,27 +96,34 @@ export default function App() {
     case "menu":
       content = (
         <MenuDetail
-          foodKey={modal.foodKey}
+          card={modal.card}
+          cards={restaurantResource.data || []}
           onMenu={onMenu}
           onConsult={onConsult}
         />
       );
       break;
     case "cafe":
-      content = <CafeDetail index={modal.index} onCafe={onCafe} />;
+      content = (
+        <CafeDetail
+          card={modal.card}
+          cards={cafeResource.data || []}
+          onCafe={onCafe}
+          onConsult={onConsult}
+        />
+      );
       break;
     case "offers":
-      content = <OffersDetail onConsult={onConsult} />;
+      content = (
+        <OffersDetail
+          cards={promotionResource.data || []}
+          onConsult={onConsult}
+        />
+      );
       break;
     case "article":
       content = (
-        <>
-          <p>{modal.article.excerpt}</p>
-          <div className="form-notice">
-            Bài mẫu dùng để duyệt bố cục. Nội dung đầy đủ và đường dẫn bài viết
-            chính thức chưa được cung cấp.
-          </div>
-        </>
+        <ArticleDetail key={modal.article.slug} slug={modal.article.slug} />
       );
       break;
     case "info":
@@ -110,50 +131,64 @@ export default function App() {
       break;
   }
   return (
-    <>
-      <a className="skip" href="#main">
-        Đến nội dung chính
-      </a>
-      <Header onConsult={onConsult} />
-      <main id="main" ref={mainRef} tabIndex="-1">
-        <h1 className="sr-only">90s Homestay — Hẹn nhau ở Tam Đảo</h1>
-        <HeroSlider onConsult={onConsult} reducedMotion={reducedMotion} />
-        <About />
-        <Rooms
-          filters={filters}
-          onView={(view) => setFilters((value) => ({ ...value, view }))}
-          onRoom={onRoom}
-          onAllRooms={onAllRooms}
-          onStay={() =>
-            setModal({ kind: "stay", title: "Ngày dự kiến lưu trú" })
-          }
+    <SiteConfigContext.Provider value={siteConfig}>
+      <div className="public-site">
+        <a className="skip" href="#main">
+          Đến nội dung chính
+        </a>
+        <Header onConsult={onConsult} />
+        <main id="main" ref={mainRef} tabIndex="-1">
+          <h1 className="sr-only">
+            {siteConfig.data?.siteTitle || "90s Homestay"}
+          </h1>
+          <HeroSlider
+            resource={heroResource}
+            onConsult={onConsult}
+            reducedMotion={reducedMotion}
+          />
+          <About resource={experienceResource} onConsult={onConsult} />
+          <Rooms
+            resource={roomResource}
+            filters={filters}
+            onView={(view) => setFilters((value) => ({ ...value, view }))}
+            onRoom={onRoom}
+            onAllRooms={onAllRooms}
+            onStay={() =>
+              setModal({ kind: "stay", title: "Ngày dự kiến lưu trú" })
+            }
+            onConsult={onConsult}
+          />
+          <Restaurant
+            resource={restaurantResource}
+            onMenu={onMenu}
+            onConsult={onConsult}
+          />
+          <Cafe resource={cafeResource} onCafe={onCafe} onConsult={onConsult} />
+          <Offers
+            resource={promotionResource}
+            onOffers={() =>
+              setModal({ kind: "offers", title: "Gợi ý ưu đãi tại 90s" })
+            }
+          />
+          <News
+            onArticle={(article) =>
+              setModal({ kind: "article", title: article.title, article })
+            }
+          />
+        </main>
+        <Footer
           onConsult={onConsult}
+          onInfo={() => setModal({ kind: "info", title: "Về bản demo" })}
         />
-        <Restaurant onMenu={onMenu} onConsult={onConsult} />
-        <Cafe onCafe={onCafe} />
-        <Offers
-          onOffers={() =>
-            setModal({ kind: "offers", title: "Gợi ý ưu đãi tại 90s" })
-          }
-        />
-        <News
-          onArticle={(article) =>
-            setModal({ kind: "article", title: article.title, article })
-          }
-        />
-      </main>
-      <Footer
-        onConsult={onConsult}
-        onInfo={() => setModal({ kind: "info", title: "Về bản demo" })}
-      />
-      <Modal
-        open={Boolean(modal)}
-        title={modal?.title || ""}
-        onDismiss={onDismiss}
-        fallbackRef={mainRef}
-      >
-        {content}
-      </Modal>
-    </>
+        <Modal
+          open={Boolean(modal)}
+          title={modal?.title || ""}
+          onDismiss={onDismiss}
+          fallbackRef={mainRef}
+        >
+          {content}
+        </Modal>
+      </div>
+    </SiteConfigContext.Provider>
   );
 }

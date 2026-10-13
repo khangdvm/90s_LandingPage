@@ -1,30 +1,61 @@
 import { assetUrl } from "../data/data.js";
-
-export default function About() {
+import PublicState from "./PublicState.jsx";
+import ContentAction from "./ContentAction.jsx";
+export default function About({ resource, onConsult }) {
+  const cards = resource.data || [];
   return (
     <section id="ve-90s" className="about">
-      <div className="container about-inner">
-        <div>
-          <p className="eyebrow">VỀ 90s HOMESTAY</p>
-          <h2>
-            Một điểm hẹn
-            <br />
-            giữa Tam Đảo.
-          </h2>
+      {resource.loading || resource.error || !cards.length ? (
+        <div className="container">
+          <PublicState
+            resource={resource}
+            label="giới thiệu"
+            empty={!cards.length}
+          />
         </div>
-        <p className="about-copy">
-          Nghỉ giữa thiên nhiên, quây quần bên bữa ngon và dành thời gian cho
-          nhau. 90s mang đến trải nghiệm lưu trú, nhà hàng và một không gian cà
-          phê mới đang được chuẩn bị.
-        </p>
-        <img
-          className="about-watermark"
-          src={assetUrl("assets/images/misc/logo.png")}
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-        />
-      </div>
+      ) : (
+        cards.map((card) => {
+          const words = card.title.split(/\s+/);
+          return (
+            <div className="container about-inner" key={card.id}>
+              <div>
+                <p className="eyebrow">{card.subtitle || "VỀ 90s HOMESTAY"}</p>
+                <h2>
+                  {words.slice(0, 3).join(" ")}
+                  {words.length > 3 && (
+                    <>
+                      <br />
+                      {" " + words.slice(3).join(" ")}
+                    </>
+                  )}
+                </h2>
+              </div>
+              <div className="about-copy public-text">
+                <p>{card.description}</p>
+                {card.ctaText && (
+                  <ContentAction
+                    card={card}
+                    className="text-link"
+                    onDetail={() => onConsult()}
+                    onConsult={() => onConsult()}
+                  >
+                    {card.ctaText}
+                  </ContentAction>
+                )}
+              </div>
+              {assetUrl(card.image) && (
+                <img
+                  className="about-watermark"
+                  src={assetUrl(card.image)}
+                  alt=""
+                  aria-hidden="true"
+                  loading="lazy"
+                />
+              )}
+            </div>
+          );
+        })
+      )}
     </section>
   );
 }

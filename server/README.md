@@ -1,6 +1,6 @@
 # 90s Homestay CMS backend
 
-JavaScript Express + PostgreSQL + Prisma API for the existing React/Vite landing page. The frontend remains untouched and still uses its local data. This phase provides content APIs only; there is no admin UI, booking, availability or payment flow.
+JavaScript Express + PostgreSQL + Prisma API for the existing React/Vite landing page. The React app includes the admin CMS and public API integration. Staff edits appear on the public website after it reloads; there is no booking, availability or payment flow. See the repository README for frontend setup and end-to-end tests.
 
 ## Local setup
 
@@ -45,9 +45,9 @@ Expected response: `{"status":"ok"}`. The server connects to PostgreSQL before l
 
 ## Frontend mapping and seed
 
-The audited frontend uses `rooms` (`id`, `name`, `count`, `view`, `price`, `guests`, `beds`, `q`, `description`), `HERO_SLIDES` (`id`, `image`, `eyebrow`, `title`, `description`, CTA and badge), and `NEWS_DATA` (`id`, `category`, `title`, `excerpt`, `image`, `publishedAt`, `href`). Rooms map `guests` → `maxGuests` and `view` → `viewType`; `count` is display metadata only, never inventory or availability. `q` preserves the existing collage quadrant. Images map to `imageUrl`; IDs are preserved and room/news slugs initially use those IDs. A future frontend integration can map these fields back at its boundary; the current components are unchanged.
+The audited frontend uses `rooms` (`id`, `name`, `count`, `view`, `price`, `guests`, `beds`, `q`, `description`), `HERO_SLIDES` (`id`, `image`, `eyebrow`, `title`, `description`, CTA and badge), and `NEWS_DATA` (`id`, `category`, `title`, `excerpt`, `image`, `publishedAt`, `href`). Rooms map `guests` → `maxGuests` and `view` → `viewType`; `count` is display metadata only, never inventory or availability. `q` preserves the existing collage quadrant. Images map to `imageUrl`; IDs are preserved and room/news slugs initially use those IDs. The public adapters in `src/api/adapters.js` map these fields back for the existing components, preserving their layouts and consultation interactions.
 
-`prisma/frontend-data.json` is a snapshot of the actual frontend data module. `seed-data.js` adds the existing restaurant dishes/subtitles, café descriptions, demo offers and about-section content from the inspected components. Cards retain `dishes` and `q` so the future admin UI can edit this content without a page builder. Content sections are fixed to `restaurant`, `cafe`, `promotion`, `experience`. The empty promotion images reflect the existing text-only offers.
+`prisma/frontend-data.json` is a snapshot of the original frontend demo data; `src/data/demoFixtures.js` retains the original fixtures only for seed fidelity tests. `seed-data.js` adds the existing restaurant dishes/subtitles, café descriptions, demo offers and about-section content from the inspected components. Cards retain `dishes` and `q` so the admin UI can edit this content without a page builder. Content sections are fixed to `restaurant`, `cafe`, `promotion`, `experience`. The empty promotion images reflect the existing text-only offers.
 
 The seed inserts 4 rooms, 3 slides, 16 explicitly labelled sample news articles (8 per category), 10 content cards and 7 settings. Placeholder contact values remain placeholders. News `content` uses the existing excerpt because no full article exists. `publishedAt` retains the sample frontend dates at midnight UTC. Published sample news is intentionally visible to match the prototype; staff should replace or unpublish it before launch.
 
@@ -102,7 +102,7 @@ Example minimum create bodies:
 { "section": "cafe", "title": "Cafe card" }
 ```
 
-Room view types are `valley`/`town`; count and sort order are nonnegative integers, q is 0–3, and price is an integer amount in VND (no floating-point currency). Update existing image URLs directly; no upload/storage API is provided yet. URL fields accept HTTP(S), current `assets/...` paths, anchors and existing placeholders, rejecting executable schemes. Content strings are plain text; the future admin/frontend UI must not render arbitrary stored text as trusted HTML. Unknown/protected fields, invalid types, empty objects and invalid dates are rejected before Prisma. IDs and timestamps are generated on create and cannot be supplied through CRUD bodies.
+Room view types are `valley`/`town`; count and sort order are nonnegative integers, q is 0–3, and price is an integer amount in VND (no floating-point currency). Update existing image URLs directly; no upload/storage API is provided yet. URL fields accept HTTP(S), current `assets/...` paths, anchors and existing placeholders, rejecting executable schemes. Content strings are plain text; the admin/public UI renders stored content as plain text rather than trusted HTML. Unknown/protected fields, invalid types, empty objects and invalid dates are rejected before Prisma. IDs and timestamps are generated on create and cannot be supplied through CRUD bodies.
 
 Errors use `{error:"message"}` with 400 validation/malformed JSON, 401 authentication, 403 disallowed CORS origin, 404 missing records, 409 duplicate slug, 413 oversized body, 429 login rate limit, and generic 500 server failures. Stack traces, credentials and database details are never returned.
 

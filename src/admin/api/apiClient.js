@@ -1,7 +1,5 @@
 import { clearSession, getToken } from "../auth/auth.js";
-const API_URL = (
-  import.meta.env.VITE_API_URL ?? "http://localhost:3000"
-).replace(/\/+$/, "");
+import { API_URL } from "../../api/config.js";
 const labels = {
   name: "Tên phòng",
   slug: "Đường dẫn",
