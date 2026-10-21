@@ -9,14 +9,16 @@ export function assetUrl(path) {
   return `${import.meta.env?.BASE_URL || "/"}${path.replace(/^\//, "")}`;
 }
 export function externalUrl(value) {
-  return external(value) ? value : "";
+  return external(value) ? new URL(value).href : "";
 }
 export function contentTarget(value) {
   return value &&
     value !== "#" &&
     target(value) &&
     !value.startsWith("PLACEHOLDER_")
-    ? value
+    ? value.startsWith("/")
+      ? `${(import.meta.env?.BASE_URL || "/").replace(/\/$/, "")}${value}`
+      : externalUrl(value) || value
     : "";
 }
 export const money = (amount) =>

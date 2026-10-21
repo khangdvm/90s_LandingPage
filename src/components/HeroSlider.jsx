@@ -152,7 +152,10 @@ export default function HeroSlider({ resource, onConsult, reducedMotion }) {
                         : undefined
                     }
                     onClick={(event) => {
-                      if ((slide.ctaTarget || "#lien-he") === "#lien-he") {
+                      if (
+                        !contentTarget(slide.ctaTarget) ||
+                        slide.ctaTarget === "#lien-he"
+                      ) {
                         event.preventDefault();
                         onConsult();
                       }

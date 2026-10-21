@@ -12,9 +12,9 @@ Nguồn checkout đang sửa, Node.js 24.19, Prisma 6.19.3, PostgreSQL 17.11 và
 | Cài mới cả 2 migration + seed      | Đạt trên `cms_delivery_20261021_test`                                                                                                         |
 | `prisma migrate status`            | Database up to date, đủ 2 migration                                                                                                           |
 | `prisma migrate diff --exit-code`  | No difference detected, mã thoát 0                                                                                                            |
-| Backend test có `RUN_DB_TESTS=1`   | **18 passed, 0 failed, 0 skipped**                                                                                                            |
+| Backend test có `RUN_DB_TESTS=1`   | **20 passed, 0 failed, 0 skipped**                                                                                                            |
 | Frontend production build          | **Đạt**, Vite 7.3.7, API test cổng 3100                                                                                                       |
-| Playwright trên production preview | **29 passed, 0 failed, 0 skipped**, 52,9 giây, 1 worker                                                                                       |
+| Playwright trên production preview | **48 passed, 0 failed, 0 skipped**, 3,4 phút, 1 worker                                                                                        |
 | `git diff --check`                 | Đạt                                                                                                                                           |
 | ZIP                                | Kiểm tra tính toàn vẹn và danh mục loại trừ sau đóng gói; không chứa env thật/Git/node_modules/dist/uploads/test-results                      |
 
@@ -33,7 +33,11 @@ Nguồn checkout đang sửa, Node.js 24.19, Prisma 6.19.3, PostgreSQL 17.11 và
 - Mobile 320/375, tablet 768 và desktop 1440 px: form/table/gallery/menu/modal, nội dung dài, ảnh 404 thật, nhiều phòng; sidebar tối đa 3 phòng và modal xem tất cả đầy đủ.
 - Section rỗng không khôi phục fixture; lỗi DB thật (đổi tên bảng tạm trên DB test) có trạng thái lỗi và retry; hero giữ keyboard/swipe/pause/autoplay/reduced motion.
 
-Các lỗi ở các vòng đầu đã được sửa; số liệu trên lấy từ vòng kiểm tra hoàn tất sau cùng. Không dùng test skip hoặc API mock để kết luận các luồng chính đã đạt.
+Đợt rà soát bổ sung có 19 ca trong `tests/workflow-audit.spec.js`: xóa sạch món, Back/Forward admin, preview văn bản cũ, upload đang chờ/mạng lỗi/retry/đổi thứ tự, giữ dữ liệu vừa nhập, phân biệt nháp hai tài khoản, nhiều lần lưu cấu hình, bản ghi không tồn tại và retry, CTA không còn đích, menu ở detail khi section rỗng, giữ ngày/số khách sang tư vấn và chuyên mục/trang tin khi quay lại. Hai ca backend bổ sung kiểm tra giữ giá/mô tả khi cập nhật danh sách món cũ và cấu hình được sửa đồng thời.
+
+Các lỗi ở các vòng đầu đã được sửa; số liệu trên lấy từ vòng kiểm tra hoàn tất sau cùng. Không dùng test skip hoặc API mock để kết luận các luồng chính đã đạt. Ca upload chậm chỉ giữ request rồi chuyển tiếp nguyên bản; backend thật vẫn xác thực/giải mã/lưu file. Lỗi ảnh 404 không trả đường dẫn filesystem.
+
+Môi trường có lần đăng nhập chậm vượt thời gian chờ 5 giây của assertion; đã đặt chờ xác nhận 10 giây và chạy lại đầy đủ 48 ca, không bỏ qua nhóm public. Snapshot lỗi có thể chứa giá trị ô mật khẩu; tài khoản test đã được đổi mật khẩu và global teardown che password/JWT secret trong artifact. Bước che đã được xác minh riêng; không dùng tài khoản production.
 
 ## Phần chưa xác minh hoặc giới hạn
 

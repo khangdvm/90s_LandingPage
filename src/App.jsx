@@ -1,5 +1,9 @@
+import {
+  readStayPreferences,
+  saveStayPreferences,
+} from "./data/publicPreferences.js";
 import { useNavigate } from "react-router-dom";
-import { BusinessNotice, SectionIntro } from "./components/ManagedContent.jsx";
+import { BusinessNotice } from "./components/ManagedContent.jsx";
 import { settingDefaults } from "../shared/content.js";
 import { useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
@@ -53,13 +57,8 @@ export default function App() {
       .querySelector('meta[name="description"]')
       ?.setAttribute("content", siteConfig.data.siteDescription || "");
   }, [rawConfig.data]);
-  const [filters, setFilters] = useState(() => ({
-    view: "all",
-    guests: 0,
-    checkin: today(),
-    checkout: nextDay(today()),
-    searched: false,
-  }));
+  const [filters, setFilters] = useState(() => readStayPreferences());
+  useEffect(() => saveStayPreferences(filters), [filters]);
   const [modal, setModal] = useState(null);
   const mainRef = useRef(null);
   const reducedMotion = useReducedMotion();
@@ -67,7 +66,7 @@ export default function App() {
     setModal({ kind: "consult", title: "Nhận tư vấn", room, type });
   const onRoom = (room) => {
     setModal(null);
-    navigate("/phong/" + room.slug);
+    navigate("/phong/" + room.slug, { state: { stay: filters } });
   };
   const onAllRooms = () =>
     setModal({ kind: "all-rooms", title: "Các hạng phòng tại 90s" });
@@ -178,7 +177,6 @@ export default function App() {
           )}
           {enabled("ve-90s") && (
             <>
-              <SectionIntro id="ve-90s" />
               <About resource={experienceResource} onConsult={onConsult} />
             </>
           )}

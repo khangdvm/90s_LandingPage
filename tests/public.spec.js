@@ -20,10 +20,12 @@ async function save(page) {
     "Lưu thay đổi thành công.",
   );
 }
-async function publicReady(page) {
+async function publicReady(page, roomCount = 4) {
   await page.goto("/");
   await expect(page.locator(".hero-slide")).toHaveCount(3);
-  await expect(page.locator("#room-layout .room-photo-button")).toHaveCount(4);
+  await expect(page.locator("#room-layout .room-photo-button")).toHaveCount(
+    roomCount,
+  );
   await expect(page.locator("#news-grid article")).toHaveCount(6);
 }
 test.beforeAll(async ({ browser }) => {
@@ -539,7 +541,11 @@ test("320px and desktop layouts, room filters, mobile menu and hero controls rem
     fullPage: true,
   });
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await publicReady(page);
+  await publicReady(page, 2);
+  await expect(page.locator('[data-view="town"]')).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

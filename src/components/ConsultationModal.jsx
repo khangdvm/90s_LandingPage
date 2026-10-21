@@ -1,3 +1,4 @@
+import { phone } from "../../shared/content.js";
 import { useEffect, useRef, useState } from "react";
 import { displayDate, money, externalUrl } from "../data/data.js";
 
@@ -21,7 +22,7 @@ export function Modal({ open, title, onDismiss, fallbackRef, children }) {
   }, [open, title]);
   function restoreFocus() {
     if (origin.current?.isConnected) origin.current.focus();
-    else fallbackRef.current?.focus();
+    else fallbackRef?.current?.focus();
     onDismiss();
   }
   return (
@@ -69,9 +70,7 @@ export function contactHref(key, value) {
   if (typeof value !== "string" || !value || value.startsWith("PLACEHOLDER_"))
     return "";
   if (key === "hotline")
-    return /^\+?[\d ()-]{3,30}$/.test(value)
-      ? `tel:${value.replace(/[ ()-]/g, "")}`
-      : "";
+    return phone(value) ? `tel:${value.replace(/[ ()-]/g, "")}` : "";
   return externalUrl(value);
 }
 export function ContactLinks({ onPlaceholder }) {

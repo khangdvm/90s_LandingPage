@@ -1,5 +1,6 @@
 import ImagePreview from "./ImagePreview.jsx";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useUploads } from "../hooks/useUploads.js";
 import { adminApi } from "../api/adminApi.js";
 import { assetUrl } from "../../data/data.js";
 import RichDocument from "../../components/RichDocument.jsx";
@@ -7,18 +8,38 @@ export function ImageInput({ value, onChange, disabled }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [file, setFile] = useState(null);
+  const uploads = useUploads();
+  const changeRef = useRef(onChange);
+  changeRef.current = onChange;
+  const running = useRef(null),
+    finishRef = useRef(null);
+  useEffect(
+    () => () => {
+      running.current?.abort();
+      finishRef.current?.();
+    },
+    [],
+  );
   async function upload(selected) {
-    if (!selected) return;
+    if (!selected || running.current) return;
+    const controller = new AbortController();
+    running.current = controller;
+    const finish = uploads.start();
+    finishRef.current = finish;
     setFile(selected);
     setBusy(true);
     setError("");
     try {
-      const r = await adminApi.upload(selected);
-      onChange(r.url);
+      const r = await adminApi.upload(selected, controller.signal);
+      if (!controller.signal.aborted) changeRef.current(r.url);
     } catch (e) {
-      setError(e.message);
+      if (!controller.signal.aborted) setError(e.message);
     } finally {
-      setBusy(false);
+      finish();
+      if (running.current === controller) {
+        running.current = null;
+        if (!controller.signal.aborted) setBusy(false);
+      }
     }
   }
   return (
@@ -37,7 +58,11 @@ export function ImageInput({ value, onChange, disabled }) {
       {error && (
         <p role="alert">
           {error}{" "}
-          <button type="button" onClick={() => upload(file)}>
+          <button
+            type="button"
+            disabled={disabled || busy}
+            onClick={() => upload(file)}
+          >
             Thử lại upload
           </button>
         </p>
@@ -55,12 +80,19 @@ export function ImageInput({ value, onChange, disabled }) {
   );
 }
 export function GalleryEditor({ value = [], onChange, disabled, onCover }) {
+  const [revision, setRevision] = useState(0);
+  const restructure = (next) => {
+    setRevision((v) => v + 1);
+    onChange(next);
+  };
+  const uploads = useUploads();
+  disabled = disabled || uploads.pending > 0;
   const change = (i, next) =>
     onChange(value.map((v, j) => (i === j ? next : v)));
   return (
     <div className="cms-stack">
       {value.map((url, i) => (
-        <fieldset key={i}>
+        <fieldset key={`${revision}-${i}`}>
           <legend>Ảnh {i + 1}</legend>
           <button
             type="button"
@@ -86,7 +118,7 @@ export function GalleryEditor({ value = [], onChange, disabled, onCover }) {
             onClick={() => {
               const a = [...value];
               [a[i - 1], a[i]] = [a[i], a[i - 1]];
-              onChange(a);
+              restructure(a);
             }}
           >
             Đưa lên
@@ -94,7 +126,7 @@ export function GalleryEditor({ value = [], onChange, disabled, onCover }) {
           <button
             type="button"
             disabled={disabled}
-            onClick={() => onChange(value.filter((_, j) => j !== i))}
+            onClick={() => restructure(value.filter((_, j) => j !== i))}
           >
             Xóa khỏi gallery
           </button>
@@ -103,7 +135,7 @@ export function GalleryEditor({ value = [], onChange, disabled, onCover }) {
       <button
         type="button"
         disabled={disabled || value.length >= 30}
-        onClick={() => onChange([...value, ""])}
+        onClick={() => restructure([...value, ""])}
       >
         Thêm ảnh gallery
       </button>
@@ -115,13 +147,20 @@ export function GalleryEditor({ value = [], onChange, disabled, onCover }) {
   );
 }
 export function MenuEditor({ value = [], onChange, disabled }) {
+  const [revision, setRevision] = useState(0);
+  const restructure = (next) => {
+    setRevision((v) => v + 1);
+    onChange(next);
+  };
+  const uploads = useUploads();
+  disabled = disabled || uploads.pending > 0;
   const change = (i, k, v) =>
     onChange(value.map((x, j) => (j === i ? { ...x, [k]: v } : x)));
-  const order = (a) => onChange(a.map((x, i) => ({ ...x, sortOrder: i })));
+  const order = (a) => restructure(a.map((x, i) => ({ ...x, sortOrder: i })));
   return (
     <div className="cms-stack">
       {value.map((x, i) => (
-        <fieldset key={i}>
+        <fieldset key={`${revision}-${i}`}>
           <legend>Món {i + 1}</legend>
           {[
             ["name", "Tên món"],
@@ -192,7 +231,7 @@ export function MenuEditor({ value = [], onChange, disabled }) {
         type="button"
         disabled={disabled || value.length >= 100}
         onClick={() =>
-          onChange([
+          restructure([
             ...value,
             {
               name: "",
@@ -212,6 +251,13 @@ export function MenuEditor({ value = [], onChange, disabled }) {
   );
 }
 export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
+  const [revision, setRevision] = useState(0);
+  const restructure = (next) => {
+    setRevision((v) => v + 1);
+    onChange(next);
+  };
+  const uploads = useUploads();
+  disabled = disabled || uploads.pending > 0;
   const [preview, setPreview] = useState(false);
   const change = (i, k, v) =>
     onChange(value.map((x, j) => (i === j ? { ...x, [k]: v } : x)));
@@ -221,14 +267,18 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
         Định dạng theo từng khối. Văn bản cũ vẫn được giữ; thêm khối mới sẽ dùng
         nội dung mới khi hiển thị.
       </p>
-      <button type="button" onClick={() => setPreview(!preview)}>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setPreview(!preview)}
+      >
         {preview ? "Tiếp tục soạn" : "Xem trước bài viết"}
       </button>
       {preview ? (
         <RichDocument blocks={value} legacy={legacy} />
       ) : (
         value.map((b, i) => (
-          <fieldset key={i}>
+          <fieldset key={`${revision}-${i}`}>
             <legend>Khối {i + 1}</legend>
             <label>
               Loại nội dung
@@ -303,7 +353,7 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
               onClick={() => {
                 const a = [...value];
                 [a[i - 1], a[i]] = [a[i], a[i - 1]];
-                onChange(a);
+                restructure(a);
               }}
             >
               Đưa khối lên
@@ -311,7 +361,7 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
             <button
               type="button"
               disabled={disabled}
-              onClick={() => onChange(value.filter((_, j) => i !== j))}
+              onClick={() => restructure(value.filter((_, j) => i !== j))}
             >
               Xóa khối
             </button>
@@ -323,7 +373,7 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
         disabled={disabled}
         onClick={() => {
           setPreview(false);
-          onChange([...value, { type: "paragraph", text: "" }]);
+          restructure([...value, { type: "paragraph", text: "" }]);
         }}
       >
         Thêm khối nội dung

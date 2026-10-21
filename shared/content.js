@@ -8,6 +8,12 @@ export const sectionIds = [
   "lien-he",
 ];
 export function external(value) {
+  if (
+    typeof value !== "string" ||
+    value.length > 20000 ||
+    !/^https?:\/\/[^/]/i.test(value)
+  )
+    return false;
   try {
     const u = new URL(value);
     return (
@@ -24,22 +30,29 @@ const empty = (v) =>
   v === "" || (typeof v === "string" && /^PLACEHOLDER_[A-Z0-9_]+$/.test(v));
 export const image = (v) =>
   typeof v === "string" &&
+  v.length <= 20000 &&
   (empty(v) ||
     external(v) ||
     (/^\/?assets\/[a-zA-Z0-9_./-]+\.(?:png|jpe?g|webp|gif|avif|svg)$/.test(v) &&
       !v.includes("..")) ||
     /^\/uploads\/[a-f0-9-]+\.webp$/.test(v));
 export const contact = (v) =>
-  typeof v === "string" && (empty(v) || external(v));
+  typeof v === "string" && v.length <= 20000 && (empty(v) || external(v));
 export const target = (v) =>
   typeof v === "string" &&
+  v.length <= 20000 &&
   (empty(v) ||
     v === "#" ||
     external(v) ||
     sectionIds.some((id) => v === "#" + id) ||
     /^\/(phong|tin-tuc)\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v));
 export const phone = (v) =>
-  typeof v === "string" && (empty(v) || /^\+?[\d ()-]{3,30}$/.test(v));
+  typeof v === "string" &&
+  v.length <= 20000 &&
+  (empty(v) ||
+    (/^\+?[\d ()-]{3,30}$/.test(v) &&
+      v.replace(/\D/g, "").length >= 3 &&
+      v.replace(/\D/g, "").length <= 15));
 export const settingDefaults = {
   brandName: "90s Homestay",
   logoUrl: "assets/images/misc/logo.png",
@@ -109,4 +122,24 @@ export function validDoc(doc) {
         (b.src === undefined || image(b.src)),
     )
   );
+}
+
+export const galleryImage = (v) =>
+  Boolean(v) && image(v) && !v.startsWith("PLACEHOLDER_");
+export function menuFromNames(names, existing = []) {
+  const remaining = Array.isArray(existing) ? [...existing] : [];
+  return names.map((name, sortOrder) => {
+    const index = remaining.findIndex((x) => x.name === name);
+    const previous =
+      index < 0
+        ? {
+            price: null,
+            unit: "",
+            description: "",
+            imageUrl: "",
+            isActive: true,
+          }
+        : remaining.splice(index, 1)[0];
+    return { ...previous, name, sortOrder };
+  });
 }

@@ -1,7 +1,7 @@
-import { SectionHeading } from "./ManagedContent.jsx";
+import { useContent, SectionHeading } from "./ManagedContent.jsx";
 import SafeImage from "./SafeImage.jsx";
-import { Link } from "react-router-dom";
-import { useCallback, useEffect, useRef, useState, Fragment } from "react";
+import { Link, useSearchParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, Fragment } from "react";
 import {
   NEWS_PAGE_SIZE,
   displayDate,
@@ -13,8 +13,40 @@ import { publicApi } from "../api/publicApi.js";
 import { usePublicResource } from "../hooks/usePublicResource.js";
 import PublicState from "./PublicState.jsx";
 export default function News({ onArticle }) {
-  const [category, setCategory] = useState("90s"),
-    [page, setPage] = useState(1);
+  const config = useContent();
+  const articleTarget = (value) => {
+    const url = contentTarget(value);
+    return url.startsWith("#") && config[url.slice(1) + "Enabled"] === "false"
+      ? ""
+      : url;
+  };
+  const [params, setParams] = useSearchParams();
+  const category = ["90s", "tam-dao"].includes(params.get("newsCategory"))
+    ? params.get("newsCategory")
+    : "90s";
+  const rawPage = params.get("newsPage");
+  const page = /^[1-9]\d{0,5}$/.test(rawPage || "") ? Number(rawPage) : 1;
+  function setPage(next) {
+    setParams(
+      (current) => {
+        const changed = new URLSearchParams(current);
+        changed.set("newsPage", String(next));
+        return changed;
+      },
+      { replace: true },
+    );
+  }
+  function setCategory(next) {
+    setParams(
+      (current) => {
+        const changed = new URLSearchParams(current);
+        changed.set("newsCategory", next);
+        changed.set("newsPage", "1");
+        return changed;
+      },
+      { replace: true },
+    );
+  }
   const activePage = useRef(null),
     shouldFocus = useRef(false);
   const loader = useCallback(
@@ -78,7 +110,6 @@ export default function News({ onArticle }) {
             aria-pressed={category === value}
             onClick={() => {
               setCategory(value);
-              setPage(1);
             }}
           >
             {label}
@@ -115,10 +146,10 @@ export default function News({ onArticle }) {
                 </time>
                 <h3>{item.title}</h3>
                 <p>{item.excerpt}</p>
-                {contentTarget(item.href) ? (
+                {articleTarget(item.href) ? (
                   <a
                     className="text-link"
-                    href={contentTarget(item.href)}
+                    href={articleTarget(item.href)}
                     {...(externalUrl(item.href)
                       ? { target: "_blank", rel: "noopener noreferrer" }
                       : {})}

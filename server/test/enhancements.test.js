@@ -8,6 +8,16 @@ import { image, contact, target, validDoc } from "../../shared/content.js";
 // imports from shared package use repository root, not server root
 
 test("purpose-specific links reject confirmed regressions and dangerous inputs", () => {
+  for (const bad of ["---", "( )", "+--", "12", "1234567890123456"])
+    assert.throws(() => siteConfig({ hotline: bad }));
+  for (const good of ["1900 1234", "+84 (123) 456-789"])
+    assert.equal(siteConfig({ hotline: good }).hotline, good);
+  for (const bad of [
+    "http:example.com",
+    "https:example.com",
+    "https:///example.com",
+  ])
+    assert.equal(contact(bad), false);
   assert.throws(() => siteConfig({ zaloUrl: "#lien-he" }));
   assert.throws(() => payload("rooms", { imageUrl: "#phong-nghi" }, true));
   assert.throws(() =>
@@ -120,6 +130,9 @@ test(
           .get(upload.body.url)
           .set("Origin", "http://localhost:5173")
           .expect(200);
+        await request(app)
+          .get("/uploads/00000000-0000-4000-8000-000000000000.webp")
+          .expect(404, { error: "Not found" });
         assert.equal(
           served.headers["cross-origin-resource-policy"],
           "cross-origin",
@@ -204,6 +217,64 @@ test(
           .expect(200);
         const pub = await request(app).get("/api/news/qa-rich").expect(200);
         assert.deepEqual(pub.body.contentDoc, contentDoc);
+      },
+    );
+    await t.test(
+      "legacy menu updates preserve confirmed prices and descriptions",
+      async () => {
+        const made = await auth("post", "/content")
+          .send({
+            title: "Audit Legacy Menu",
+            section: "restaurant",
+            menuItems: [
+              {
+                name: "Món giữ giá",
+                price: 123000,
+                unit: "phần",
+                description: "Không được mất",
+                imageUrl: "",
+                isActive: true,
+                sortOrder: 0,
+              },
+            ],
+          })
+          .expect(201);
+        created.push(["contentCard", made.body.id]);
+        const changed = await auth("patch", "/content/" + made.body.id)
+          .send({ dishes: ["Món giữ giá", "Món mới chưa giá"] })
+          .expect(200);
+        assert.equal(changed.body.menuItems[0].price, 123000);
+        assert.equal(changed.body.menuItems[0].description, "Không được mất");
+        assert.equal(changed.body.menuItems[1].price, null);
+        const cleared = await auth("patch", "/content/" + made.body.id)
+          .send({ menuItems: [] })
+          .expect(200);
+        assert.deepEqual(cleared.body.menuItems, []);
+      },
+    );
+    await t.test(
+      "simultaneous settings edits reject the losing update cleanly",
+      async () => {
+        const before = (await auth("get", "/site-config").expect(200)).body;
+        try {
+          const responses = await Promise.all(
+            ["A", "B"].map((x) =>
+              auth("patch", "/site-config").send({
+                _snapshot: before,
+                siteTitle: "Audit Concurrent " + x,
+              }),
+            ),
+          );
+          assert.deepEqual(responses.map((r) => r.status).sort(), [200, 409]);
+          assert.match(
+            responses.find((r) => r.status === 409).body.error,
+            /Nội dung đã thay đổi/,
+          );
+        } finally {
+          await auth("patch", "/site-config")
+            .send({ siteTitle: before.siteTitle })
+            .expect(200);
+        }
       },
     );
     await t.test("stable server pagination, search and filters", async () => {

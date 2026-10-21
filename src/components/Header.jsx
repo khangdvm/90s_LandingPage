@@ -1,3 +1,4 @@
+import { useLocation } from "react-router-dom";
 import SafeImage from "./SafeImage.jsx";
 import { useContent } from "./ManagedContent.jsx";
 import { useState } from "react";
@@ -14,12 +15,13 @@ const links = [
 ];
 export default function Header({ onConsult }) {
   const content = useContent();
+  const location = useLocation();
   const visible = links.filter(([id]) => content[id + "Enabled"] !== "false");
   const [open, setOpen] = useState(false);
   const renderLink = ([id, label]) => (
     <a
       key={id}
-      href={`${import.meta.env.BASE_URL}#${id}`}
+      href={`${import.meta.env.BASE_URL}${location.pathname === "/" ? location.search : ""}#${id}`}
       onClick={() => setOpen(false)}
     >
       {label}

@@ -9,12 +9,12 @@ export default function ContentAction({
   ...props
 }) {
   const content = useContent();
-  const target = contentTarget(card.ctaTarget);
+  let target = contentTarget(card.ctaTarget);
   if (
     target.startsWith("#") &&
     content[target.slice(1) + "Enabled"] === "false"
   )
-    return null;
+    target = "";
   if (target && target !== defaultTarget && target !== "#lien-he")
     return (
       <a

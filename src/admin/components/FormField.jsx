@@ -12,6 +12,7 @@ export default function FormField({
   error,
   disabled,
   onCover,
+  legacy,
 }) {
   const id = `cms-${field.key}`;
   const props = {
@@ -55,6 +56,7 @@ export default function FormField({
               onChange={onChange}
               disabled={disabled}
               onCover={onCover}
+              legacy={legacy}
             />
           ) : field.type === "select" ? (
             <select

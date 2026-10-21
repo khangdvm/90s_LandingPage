@@ -10,6 +10,10 @@ if (
     "Kiểm thử cần DATABASE_URL của database test đã migrate/seed, JWT_SECRET, E2E_ADMIN_EMAIL và E2E_ADMIN_PASSWORD. Không dùng database production.",
   );
 }
+if (!new URL(process.env.DATABASE_URL).pathname.endsWith("_test"))
+  throw new Error(
+    "Chỉ chạy Playwright trên database riêng có tên kết thúc bằng _test.",
+  );
 const executablePath =
   process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
   (existsSync("/usr/lib/chromium/chromium")
@@ -17,6 +21,8 @@ const executablePath =
     : undefined);
 export default defineConfig({
   testDir: "./tests",
+  globalTeardown: "./tests/redact-artifacts.js",
+  expect: { timeout: 10000 },
   fullyParallel: false,
   workers: 1,
   retries: 0,

@@ -1,3 +1,4 @@
+import { readStayPreferences } from "../data/publicPreferences.js";
 import SafeImage from "./SafeImage.jsx";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
@@ -9,7 +10,6 @@ import { RoomDetails } from "./Rooms.jsx";
 import RichDocument from "./RichDocument.jsx";
 import Header from "./Header.jsx";
 import ConsultationModal, { Modal } from "./ConsultationModal.jsx";
-import { today, nextDay } from "../data/data.js";
 import PublicState from "./PublicState.jsx";
 import { settingDefaults } from "../../shared/content.js";
 export function NotFound() {
@@ -24,11 +24,11 @@ export function NotFound() {
     </main>
   );
 }
-function Metadata({ data, kind }) {
+function Metadata({ data, kind, brand = "90s Homestay" }) {
   const { pathname } = useLocation();
   useEffect(() => {
     const title = data.name || data.title;
-    document.title = title + " — 90s Homestay";
+    document.title = title + " — " + brand;
     const description = (data.excerpt || data.description || "").slice(0, 180);
     const old = document
       .querySelector('meta[name="description"]')
@@ -69,11 +69,13 @@ function Metadata({ data, kind }) {
           .querySelector('meta[name="description"]')
           ?.setAttribute("content", old);
     };
-  }, [data, kind, pathname]);
+  }, [data, kind, pathname, brand]);
   return null;
 }
 export default function DetailPage({ kind }) {
   const { slug } = useParams();
+  const location = useLocation();
+  const stay = readStayPreferences(location.state?.stay);
   const loader = useCallback(
     (signal) =>
       kind === "room"
@@ -103,7 +105,11 @@ export default function DetailPage({ kind }) {
           <Link to="/">← Về trang chủ</Link>
           {data ? (
             <>
-              <Metadata data={data} kind={kind} />
+              <Metadata
+                data={data}
+                kind={kind}
+                brand={config.data?.brandName || "90s Homestay"}
+              />
               <h1>{data.name || data.title}</h1>
               {(!config.data || config.data.contentConfirmed !== "true") && (
                 <p className="form-notice">Nội dung mẫu / chưa được xác nhận</p>
@@ -146,12 +152,7 @@ export default function DetailPage({ kind }) {
             <ConsultationModal
               room={kind === "room" ? data : null}
               type="room"
-              filters={{
-                checkin: today(),
-                checkout: nextDay(today()),
-                guests: 0,
-                searched: false,
-              }}
+              filters={stay}
             />
           </Modal>
         </main>

@@ -1,5 +1,7 @@
 import {
   image,
+  galleryImage,
+  menuFromNames,
   contact,
   target,
   phone,
@@ -41,7 +43,7 @@ const common = {
 };
 const schemas = {
   rooms: {
-    gallery: (v) => Array.isArray(v) && v.length <= 30 && v.every(image),
+    gallery: (v) => Array.isArray(v) && v.length <= 30 && v.every(galleryImage),
     name: requiredText,
     slug,
     description: text,
@@ -116,6 +118,12 @@ export function payload(resource, body, patch = false) {
     for (const key of required[resource])
       if (!Object.hasOwn(body, key)) fail(`Required field: ${key}`);
   const data = { ...body };
+  if (
+    resource === "content" &&
+    Object.hasOwn(body, "dishes") &&
+    !Object.hasOwn(body, "menuItems")
+  )
+    data.menuItems = menuFromNames(body.dishes);
   if (data.publishedAt) data.publishedAt = new Date(data.publishedAt);
   return data;
 }

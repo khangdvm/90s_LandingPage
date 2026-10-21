@@ -1,3 +1,4 @@
+import { UploadContext, useUploadState } from "../hooks/useUploads.js";
 import { assetUrl } from "../../data/data.js";
 import { useDraft } from "../hooks/useDraft.jsx";
 import { useEffect, useRef, useState } from "react";
@@ -52,27 +53,32 @@ function displayValue(key, value) {
   return value;
 }
 function Editor({ config, item, defaults, busy, onSave, onCancel }) {
+  const uploads = useUploadState();
+  const customSlug = useRef(Boolean(item));
   const [draft, setDraft] = useState(() => draftFor(config, item || defaults));
   const initial = useRef(draftFor(config, item || defaults));
   const protection = useDraft(
     config.api + "." + (item?.id || "new"),
     draft,
     initial.current,
-    setDraft,
+    (restored) => {
+      if (restored.slug) customSlug.current = true;
+      setDraft(restored);
+    },
     item?.updatedAt || "",
+    uploads.pending > 0,
   );
   const [errors, setErrors] = useState({}),
     [notice, setNotice] = useState("");
   const heading = useRef(null),
     form = useRef(null);
-  const customSlug = useRef(Boolean(item));
   useEffect(() => {
     heading.current?.focus();
   }, []);
   function submit(event) {
     event.preventDefault();
     setNotice("");
-    if (form.current?.querySelector('[data-upload-busy="true"]')) {
+    if (uploads.pending > 0) {
       setNotice("Chờ upload ảnh hoàn tất trước khi lưu.");
       return;
     }
@@ -95,79 +101,82 @@ function Editor({ config, item, defaults, busy, onSave, onCancel }) {
     );
   }
   return (
-    <section className="cms-panel">
-      <h2 ref={heading} tabIndex={-1}>
-        {item ? `Chỉnh sửa ${config.singular}` : config.create}
-      </h2>
-      <p className="cms-help">Các trường có dấu * là bắt buộc.</p>
-      <Feedback success={notice} />
-      {protection.recovery}
-      {protection.dirty && (
-        <p role="status">
-          Có thay đổi chưa lưu. Bản nháp được lưu trên trình duyệt này.
-        </p>
-      )}
-      <form ref={form} onSubmit={submit} noValidate>
-        <div className="cms-form-grid">
-          {config.fields.map((field) => (
-            <FormField
-              key={field.key}
-              field={field}
-              value={draft[field.key]}
-              onCover={(url) =>
-                setDraft((current) => ({ ...current, imageUrl: url }))
-              }
+    <UploadContext.Provider value={uploads}>
+      <section className="cms-panel">
+        <h2 ref={heading} tabIndex={-1}>
+          {item ? `Chỉnh sửa ${config.singular}` : config.create}
+        </h2>
+        <p className="cms-help">Các trường có dấu * là bắt buộc.</p>
+        <Feedback success={notice} />
+        {protection.recovery}
+        {protection.dirty && (
+          <p role="status">
+            Có thay đổi chưa lưu. Bản nháp được lưu trên trình duyệt này.
+          </p>
+        )}
+        <form ref={form} onSubmit={submit} noValidate>
+          <div className="cms-form-grid">
+            {config.fields.map((field) => (
+              <FormField
+                key={field.key}
+                field={field}
+                value={draft[field.key]}
+                legacy={draft.content}
+                onCover={(url) =>
+                  setDraft((current) => ({ ...current, imageUrl: url }))
+                }
+                disabled={busy}
+                error={errors[field.key]}
+                onChange={(value) => {
+                  if (field.key === "slug") customSlug.current = true;
+                  setDraft((current) => ({
+                    ...current,
+                    [field.key]: value,
+                    ...(["name", "title"].includes(field.key) &&
+                    !customSlug.current &&
+                    config.fields.some((f) => f.slug)
+                      ? { slug: slugFrom(value) }
+                      : {}),
+                  }));
+                  setErrors((current) => ({ ...current, [field.key]: "" }));
+                }}
+              />
+            ))}
+          </div>
+          {config.fields.some((field) => field.slug) && (
+            <button
+              type="button"
+              className="cms-text-button"
               disabled={busy}
-              error={errors[field.key]}
-              onChange={(value) => {
-                if (field.key === "slug") customSlug.current = true;
+              onClick={() => {
                 setDraft((current) => ({
                   ...current,
-                  [field.key]: value,
-                  ...(["name", "title"].includes(field.key) &&
-                  !customSlug.current &&
-                  config.fields.some((f) => f.slug)
-                    ? { slug: slugFrom(value) }
-                    : {}),
+                  slug: slugFrom(current.name || current.title || ""),
                 }));
-                setErrors((current) => ({ ...current, [field.key]: "" }));
+                setErrors((current) => ({ ...current, slug: "" }));
               }}
-            />
-          ))}
-        </div>
-        {config.fields.some((field) => field.slug) && (
-          <button
-            type="button"
-            className="cms-text-button"
-            disabled={busy}
-            onClick={() => {
-              setDraft((current) => ({
-                ...current,
-                slug: slugFrom(current.name || current.title || ""),
-              }));
-              setErrors((current) => ({ ...current, slug: "" }));
-            }}
-          >
-            Tạo đường dẫn từ tên / tiêu đề
-          </button>
-        )}
-        <div className="cms-form-actions">
-          <button className="cms-button cms-primary" disabled={busy}>
-            {busy ? "Đang lưu…" : "Lưu thay đổi"}
-          </button>
-          <button
-            type="button"
-            className="cms-button cms-secondary"
-            onClick={() => {
-              if (protection.discard()) onCancel();
-            }}
-            disabled={busy}
-          >
-            Hủy chỉnh sửa
-          </button>
-        </div>
-      </form>
-    </section>
+            >
+              Tạo đường dẫn từ tên / tiêu đề
+            </button>
+          )}
+          <div className="cms-form-actions">
+            <button className="cms-button cms-primary" disabled={busy}>
+              {busy ? "Đang lưu…" : "Lưu thay đổi"}
+            </button>
+            <button
+              type="button"
+              className="cms-button cms-secondary"
+              onClick={() => {
+                if (protection.discard()) onCancel();
+              }}
+              disabled={busy}
+            >
+              Hủy chỉnh sửa
+            </button>
+          </div>
+        </form>
+      </section>
+    </UploadContext.Provider>
   );
 }
 export default function ResourcePage({ resource }) {
@@ -188,19 +197,25 @@ export default function ResourcePage({ resource }) {
     [confirm, setConfirm] = useState(null),
     [deleteError, setDeleteError] = useState("");
   const editRequested = search.get("edit");
+  const [editError, setEditError] = useState("");
   useEffect(() => {
+    setEditError("");
+    setEditor(null);
     if (!editRequested) return;
     const controller = new AbortController();
     adminApi
       .get(config.api, editRequested, controller.signal)
-      .then((item) => setEditor({ item }))
+      .then((item) => {
+        if (!controller.signal.aborted) setEditor({ item });
+      })
       .catch((e) => {
-        if (e.name !== "AbortError") setError(e);
+        if (!controller.signal.aborted) setEditError(e);
       });
     return () => controller.abort();
-  }, [editRequested, config.api]);
+  }, [editRequested, config.api, search.get("retry")]);
   const createRequested = search.get("new") === "1";
-  const editing = editor !== null || createRequested;
+  const editing = Boolean(editRequested) || createRequested;
+  const editorReady = !editRequested || editor?.item?.id === editRequested;
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
@@ -298,7 +313,6 @@ export default function ResourcePage({ resource }) {
               setError("");
               setSuccess("");
               setSearch({ new: "1" });
-              setEditor({ item: null });
             }}
           >
             {config.create}
@@ -306,7 +320,26 @@ export default function ResourcePage({ resource }) {
         )}
       </div>
       <Feedback error={error} success={success} />
-      {editing ? (
+      {editing && !editorReady ? (
+        editError ? (
+          <section className="cms-panel">
+            <Feedback error={editError} />
+            <button type="button" onClick={closeEditor}>
+              Về danh sách
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                setSearch({ edit: editRequested, retry: String(Date.now()) })
+              }
+            >
+              Thử lại
+            </button>
+          </section>
+        ) : (
+          <LoadingState />
+        )
+      ) : editing ? (
         <Editor
           key={editor?.item?.id || "new"}
           config={config}
@@ -465,7 +498,7 @@ export default function ResourcePage({ resource }) {
                             aria-label={`Sửa ${row.name || row.title}`}
                             onClick={() => {
                               setSearch({ edit: row.id });
-                              setEditor({ item: row });
+
                               setError("");
                               setSuccess("");
                             }}

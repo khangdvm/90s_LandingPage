@@ -6,10 +6,10 @@ export const adminApi = {
     apiRequest(`/${resource}${query ? "?" + new URLSearchParams(query) : ""}`, {
       signal,
     }),
-  upload: (file) => {
+  upload: (file, signal) => {
     const body = new FormData();
     body.append("image", file);
-    return apiRequest("/uploads", { method: "POST", body });
+    return apiRequest("/uploads", { method: "POST", body, signal });
   },
   get: (resource, id, signal) =>
     apiRequest(`/${resource}/${encodeURIComponent(id)}`, { signal }),

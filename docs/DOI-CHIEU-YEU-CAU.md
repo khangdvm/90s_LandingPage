@@ -38,3 +38,24 @@ Nguồn: checkout hiện có `/workspace/90s_LandingPage`, giữ React/Vite, Exp
 | Footer giới thiệu                                                                     | Cài đặt → Nội dung footer                  | Copyright theo năm + thương hiệu                                                         |
 | Cảnh báo mẫu/thông báo kinh doanh                                                     | Cài đặt → Trạng thái xác nhận, Thông báo   | Mặc định chưa xác nhận; chỉ chủ website quyết định chuyển trạng thái                     |
 | Nhãn nút UI (Lưu, Hủy, Nhận tư vấn...), hướng dẫn sử dụng, bộ lọc view, nhãn thống kê | Mã ứng dụng                                | Đây là UI ổn định, không cho sửa HTML/CSS hoặc pagebuilder                               |
+
+## Bổ sung sau đợt rà soát hành trình sử dụng
+
+Các ca tái hiện nằm trong `tests/workflow-audit.spec.js`, dùng API/PostgreSQL thật. Ca mạng chậm giữ request upload trước khi chuyển tiếp nguyên bản, không giả response thành công.
+
+| Lỗi/đường đi thiếu trước rà soát                                                  | Sửa và kiểm chứng                                                                                                                                   |
+| --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Xóa hết món nhưng tên cũ xuất hiện lại khi mở form/public                         | Phân biệt JSON `[]` chủ động xóa với dữ liệu cũ chưa có trường; trạng thái thực đơn rỗng rõ ràng                                                    |
+| Back/Forward admin còn form cũ dù URL đã về danh sách                             | URL quyết định màn hình; tải bản ghi riêng trước khi mở editor; lỗi tải có Retry/Về danh sách                                                       |
+| Preview bài thuần cũ rỗng                                                         | Truyền nội dung thuần vào preview, giữ xuống dòng                                                                                                   |
+| Chuyển preview/bỏ khối khi upload có thể bỏ qua chặn lưu hoặc gán nhầm ảnh        | Registry upload theo form; khóa cấu trúc khi đang tải, callback nhận dữ liệu mới nhất, abort khi rời form; retry không đi theo mục khác sau sắp xếp |
+| CTA tới section tắt làm biến mất cả thẻ                                           | Giữ ảnh/tiêu đề/thông tin và mở chi tiết của thẻ; tin dùng route riêng khi đích section không tồn tại                                               |
+| Hotline chỉ có dấu gạch, URL thiếu `://` được nhận                                | Dùng validator chung ở UI/API/renderer; số phải có chữ số, URL ngoài phải tuyệt đối HTTP(S)                                                         |
+| Chỉnh cấu hình đồng thời trả lỗi 500                                              | Trả 409 và hướng dẫn đối chiếu bản nháp; không ghi đè thay đổi mới hơn                                                                              |
+| Client cũ cập nhật tên món làm mất giá/mô tả của món còn giữ                      | Ghép món theo tên, giữ metadata đã xác nhận và kiểm tra phiên bản khi cập nhật                                                                      |
+| Bản nháp tồn tại sau khi nhập lại giá trị gốc; slug phục hồi lại bị thay theo tên | Xóa autosave khi thực sự hoàn tác, giữ slug tùy chỉnh khi khôi phục; kiểm tra sau nhiều lần lưu                                                     |
+| Ngữ cảnh ngày/số khách mất khi mở trang phòng                                     | Giữ lựa chọn trong tab và truyền vào detail/tư vấn; Back phục hồi bộ lọc                                                                            |
+| Quay lại từ bài viết mất chuyên mục/trang                                         | Chuyên mục và số trang nằm trong URL, phân trang vẫn chạy trên server                                                                               |
+| Nav ở detail dẫn tới section rỗng                                                 | Public config tính trạng thái hiển thị thực tế, không sửa cấu hình admin; lỗi một nguồn không làm mất thông tin liên hệ                             |
+
+Ngoài ra đã kiểm tra bản nháp tách giữa hai tài khoản admin, đăng nhập/hết phiên, API không có bản ghi, upload file hỏng, retry sau mất mạng, thứ tự/ẩn món, đóng modal bằng Escape và phục hồi focus. Không bổ sung nghiệp vụ đặt phòng hoặc lưu yêu cầu tư vấn.

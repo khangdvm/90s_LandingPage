@@ -1,3 +1,4 @@
+import SafeImage from "./SafeImage.jsx";
 import { SectionHeading } from "./ManagedContent.jsx";
 import { BusinessNotice, useContent } from "./ManagedContent.jsx";
 import { assetUrl, money } from "../data/data.js";
@@ -92,7 +93,7 @@ export default function Restaurant({ resource, onMenu, onConsult }) {
 }
 export function MenuDetail({ card, cards, onMenu, onConsult }) {
   const settings = useContent();
-  const menu = card.menuItems?.length
+  const menu = Array.isArray(card.menuItems)
     ? card.menuItems
     : card.dishes.map((name, sortOrder) => ({
         name,
@@ -124,6 +125,9 @@ export function MenuDetail({ card, cards, onMenu, onConsult }) {
         />
         <h3>{card.title}</h3>
         <p className="public-text">{card.description}</p>
+        {!menu.some((x) => x.isActive) && (
+          <p>Chưa có món được công khai trong nhóm này.</p>
+        )}
         <ul className="menu-dishes">
           {menu
             .filter((x) => x.isActive)
@@ -132,7 +136,7 @@ export function MenuDetail({ card, cards, onMenu, onConsult }) {
               <li key={index}>
                 <div>
                   {assetUrl(dish.imageUrl) && (
-                    <img
+                    <SafeImage
                       className="menu-thumbnail"
                       src={assetUrl(dish.imageUrl)}
                       alt={dish.name}

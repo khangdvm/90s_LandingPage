@@ -1,4 +1,4 @@
-import { settingDefaults } from "../../../shared/content.js";
+import { menuFromNames, settingDefaults } from "../../../shared/content.js";
 import { Router } from "express";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
@@ -134,18 +134,32 @@ export function adminRoutes(db, secret) {
         (typeof _version !== "string" || !Number.isFinite(Date.parse(_version)))
       )
         throw new HttpError(400, "Phiên bản không hợp lệ");
+      let expectedVersion = _version;
+      if (
+        resource === "content" &&
+        Object.hasOwn(body, "dishes") &&
+        !Object.hasOwn(body, "menuItems")
+      ) {
+        const current = found(
+          await db.contentCard.findUnique({ where: { id: req.params.id } }),
+        );
+        data.menuItems = menuFromNames(body.dishes, current.menuItems);
+        expectedVersion ||= current.updatedAt.toISOString();
+      }
       try {
         res.json(
           await db[model].update({
             where: {
               id: req.params.id,
-              ...(_version ? { updatedAt: new Date(_version) } : {}),
+              ...(expectedVersion
+                ? { updatedAt: new Date(expectedVersion) }
+                : {}),
             },
             data,
           }),
         );
       } catch (error) {
-        if (_version && error.code === "P2025")
+        if (expectedVersion && error.code === "P2025")
           throw new HttpError(
             409,
             "Nội dung đã thay đổi trên máy chủ. Hãy giữ bản nháp và tải lại trước khi hợp nhất.",

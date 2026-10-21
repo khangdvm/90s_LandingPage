@@ -1,3 +1,4 @@
+import { SectionIntro } from "./ManagedContent.jsx";
 import SafeImage from "./SafeImage.jsx";
 import { assetUrl } from "../data/data.js";
 import PublicState from "./PublicState.jsx";
@@ -6,6 +7,7 @@ export default function About({ resource, onConsult }) {
   const cards = resource.data || [];
   return (
     <section id="ve-90s" className="about">
+      <SectionIntro id="ve-90s" />
       {resource.loading || resource.error || !cards.length ? (
         <div className="container">
           <PublicState

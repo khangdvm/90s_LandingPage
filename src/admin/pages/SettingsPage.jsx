@@ -1,3 +1,4 @@
+import { UploadContext, useUploadState } from "../hooks/useUploads.js";
 import { useDraft } from "../hooks/useDraft.jsx";
 import { settingDefaults } from "../../../shared/content.js";
 import { useEffect, useRef, useState } from "react";
@@ -6,6 +7,7 @@ import { settingFields, validateDraft } from "../forms.js";
 import FormField from "../components/FormField.jsx";
 import { Feedback, LoadingState } from "../components/Feedback.jsx";
 export default function SettingsPage() {
+  const uploads = useUploadState();
   const [values, setValues] = useState(null),
     [initial, setInitial] = useState(null),
     [errors, setErrors] = useState({}),
@@ -20,6 +22,7 @@ export default function SettingsPage() {
     initial,
     setValues,
     JSON.stringify(initial),
+    uploads.pending > 0,
   );
   useEffect(() => {
     const controller = new AbortController();
@@ -54,7 +57,7 @@ export default function SettingsPage() {
       );
       return;
     }
-    if (form.current?.querySelector('[data-upload-busy="true"]')) {
+    if (uploads.pending > 0) {
       setError("Chờ upload ảnh hoàn tất.");
       return;
     }
@@ -88,7 +91,7 @@ export default function SettingsPage() {
     }
   }
   return (
-    <>
+    <UploadContext.Provider value={uploads}>
       <div className="cms-page-heading">
         <div>
           <p className="cms-eyebrow">THÔNG TIN WEBSITE</p>
@@ -159,6 +162,6 @@ export default function SettingsPage() {
           </form>
         </section>
       )}
-    </>
+    </UploadContext.Provider>
   );
 }

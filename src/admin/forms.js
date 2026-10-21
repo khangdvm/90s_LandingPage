@@ -1,5 +1,7 @@
 import {
   image as validImage,
+  galleryImage,
+  menuFromNames,
   contact,
   target,
   phone,
@@ -238,16 +240,8 @@ function localDate(value) {
 }
 export function draftFor(config, row) {
   const values = { ...config.defaults, ...row };
-  if (!values.menuItems?.length && values.dishes?.length)
-    values.menuItems = values.dishes.map((name, sortOrder) => ({
-      name,
-      price: null,
-      unit: "",
-      description: "",
-      imageUrl: "",
-      isActive: true,
-      sortOrder,
-    }));
+  if (!Array.isArray(values.menuItems) && values.dishes?.length)
+    values.menuItems = menuFromNames(values.dishes);
   return Object.fromEntries(
     config.fields.map((field) => {
       const value = values[field.key];
@@ -317,7 +311,7 @@ export function validateDraft(fields, draft) {
       errors[field.key] = "Chỉ nhập tối đa 100 món.";
     else if (
       field.type === "gallery" &&
-      (value.length > 30 || !value.every((v) => v && validImage(v)))
+      (value.length > 30 || !value.every(galleryImage))
     )
       errors[field.key] = "Gallery cần ảnh hợp lệ, tối đa 30 ảnh.";
     else if (field.type === "menu" && !validMenu(value))

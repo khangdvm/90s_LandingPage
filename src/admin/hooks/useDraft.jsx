@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { useBlocker } from "react-router-dom";
 import { getToken } from "../auth/auth.js";
-export function useDraft(scope, value, initial, setValue, version = "") {
+export function useDraft(
+  scope,
+  value,
+  initial,
+  setValue,
+  version = "",
+  uploading = false,
+) {
   const [account] = useState(() => {
     try {
       return JSON.parse(
@@ -21,6 +28,7 @@ export function useDraft(scope, value, initial, setValue, version = "") {
   });
   const dirty =
     initial !== null && JSON.stringify(value) !== JSON.stringify(initial);
+  const changed = useRef(false);
   const skip = useRef(false),
     prompted = useRef(false);
   const [storageError, setStorageError] = useState("");
@@ -29,7 +37,7 @@ export function useDraft(scope, value, initial, setValue, version = "") {
   }, [dirty]);
   const blocker = useBlocker(
     ({ nextLocation }) =>
-      dirty &&
+      (dirty || uploading) &&
       !skip.current &&
       !nextLocation.pathname.includes("/admin/login") &&
       !!getToken(),
@@ -51,7 +59,14 @@ export function useDraft(scope, value, initial, setValue, version = "") {
     }
   }, [blocker]);
   useEffect(() => {
+    if (!dirty && changed.current && !saved) {
+      try {
+        localStorage.removeItem(key);
+      } catch {}
+      changed.current = false;
+    }
     if (dirty && !skip.current) {
+      changed.current = true;
       try {
         localStorage.setItem(
           key,
@@ -63,17 +78,17 @@ export function useDraft(scope, value, initial, setValue, version = "") {
         );
       }
     }
-  }, [key, value, dirty, version]);
+  }, [key, value, dirty, version, saved]);
   useEffect(() => {
     const warn = (e) => {
-      if (dirty && !skip.current) {
+      if ((dirty || uploading) && !skip.current) {
         e.preventDefault();
         e.returnValue = "";
       }
     };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
+  }, [dirty, uploading]);
   function clear() {
     skip.current = true;
     try {
@@ -82,7 +97,7 @@ export function useDraft(scope, value, initial, setValue, version = "") {
     setSaved(null);
   }
   function discard() {
-    if (!dirty || window.confirm("Bỏ các thay đổi chưa lưu?")) {
+    if (!(dirty || uploading) || window.confirm("Bỏ các thay đổi chưa lưu?")) {
       clear();
       return true;
     }
