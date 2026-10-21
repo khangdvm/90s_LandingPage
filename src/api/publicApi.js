@@ -20,7 +20,7 @@ export const publicApi = {
   news: async ({ category, page, limit }, signal) =>
     mapNewsPage(
       await publicRequest(
-        `/news?${new URLSearchParams({ category, page: String(page), limit: String(limit) })}`,
+        `/news?${new URLSearchParams({ ...(category ? { category } : {}), page: String(page), limit: String(limit) })}`,
         signal,
       ),
     ),

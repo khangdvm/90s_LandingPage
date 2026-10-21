@@ -1,3 +1,13 @@
+import {
+  image as validImage,
+  contact,
+  target,
+  phone,
+  validMenu,
+  validDoc,
+  settingDefaults,
+  sectionIds,
+} from "../../shared/content.js";
 export const categories = [
   ["90s", "Về 90s"],
   ["tam-dao", "Về Tam Đảo"],
@@ -82,11 +92,12 @@ export const resources = {
         ["valley", "View thung lũng"],
         ["town", "View thị trấn"],
       ]),
+      { key: "gallery", label: "Gallery phòng", type: "gallery" },
       number("count", "Tổng số phòng hiển thị", 0, {
         hint: "Thông tin mô tả của hạng phòng; không dùng để kiểm tra phòng trống.",
       }),
       image,
-      quadrant,
+
       sort,
       active,
     ],
@@ -130,6 +141,7 @@ export const resources = {
         large: true,
         hint: "Nội dung văn bản thuần; không nhập HTML.",
       }),
+      { key: "contentDoc", label: "Soạn bài có định dạng", type: "document" },
       image,
       text("href", "Liên kết bài viết", {
         url: true,
@@ -137,7 +149,7 @@ export const resources = {
       }),
       {
         key: "publishedAt",
-        label: "Ngày và giờ đăng",
+        label: "Ngày hiển thị trên bài",
         type: "datetime-local",
         required: true,
         hint: "Giờ địa phương của thiết bị. Trạng thái “Đăng bài” quyết định bài có được công khai hay không.",
@@ -166,11 +178,8 @@ export const resources = {
       description,
       image,
       ...cta,
-      quadrant,
-      text("dishes", "Danh sách món", {
-        type: "lines",
-        hint: "Mỗi dòng một món, tối đa 100 món. Để trống cho nội dung không có thực đơn.",
-      }),
+
+      { key: "menuItems", label: "Thực đơn", type: "menu" },
       sort,
       active,
     ],
@@ -187,6 +196,38 @@ export const settingFields = [
   text("siteTitle", "Tiêu đề website"),
   text("siteDescription", "Mô tả website", { type: "textarea" }),
 ];
+settingFields.push(
+  text("brandName", "Tên thương hiệu"),
+  text("logoUrl", "URL logo", { url: true }),
+  text("footerText", "Nội dung footer", { type: "textarea" }),
+  text("businessNotice", "Thông báo kinh doanh", { type: "textarea" }),
+  select("contentConfirmed", "Trạng thái xác nhận toàn bộ nội dung", [
+    ["false", "Dữ liệu mẫu / chưa xác nhận"],
+    ["true", "Chủ website đã xác nhận toàn bộ"],
+  ]),
+  text("cafeStatus", "Trạng thái khu cà phê"),
+  text("unpricedLabel", "Nhãn món chưa có giá"),
+);
+for (const id of sectionIds) {
+  const label = {
+    "ve-90s": "Về 90s",
+    "phong-nghi": "Phòng nghỉ",
+    "nha-hang": "Nhà hàng",
+    "ca-phe": "Cà phê",
+    "uu-dai": "Ưu đãi",
+    "tin-tuc": "Tin tức",
+    "lien-he": "Liên hệ",
+  }[id];
+  settingFields.push(
+    select(id + "Enabled", label + " — hiển thị", [
+      ["true", "Bật"],
+      ["false", "Tắt"],
+    ]),
+    text(id + "Title", label + " — tiêu đề"),
+    text(id + "Subtitle", label + " — tiêu đề phụ"),
+    text(id + "Description", label + " — mô tả", { type: "textarea" }),
+  );
+}
 function localDate(value) {
   const date = new Date(value);
   return Number.isFinite(date.getTime())
@@ -197,40 +238,35 @@ function localDate(value) {
 }
 export function draftFor(config, row) {
   const values = { ...config.defaults, ...row };
+  if (!values.menuItems?.length && values.dishes?.length)
+    values.menuItems = values.dishes.map((name, sortOrder) => ({
+      name,
+      price: null,
+      unit: "",
+      description: "",
+      imageUrl: "",
+      isActive: true,
+      sortOrder,
+    }));
   return Object.fromEntries(
     config.fields.map((field) => {
       const value = values[field.key];
       return [
         field.key,
-        field.type === "checkbox"
-          ? Boolean(value)
-          : field.type === "lines"
-            ? (value || []).join("\n")
-            : field.type === "datetime-local"
-              ? localDate(value || new Date())
-              : String(value ?? ""),
+        ["gallery", "menu", "document"].includes(field.type)
+          ? Array.isArray(value)
+            ? value
+            : []
+          : field.type === "checkbox"
+            ? Boolean(value)
+            : field.type === "lines"
+              ? (value || []).join("\n")
+              : field.type === "datetime-local"
+                ? localDate(value || new Date())
+                : String(value ?? ""),
       ];
     }),
   );
-}
-function validLink(value) {
-  if (
-    !value ||
-    value.startsWith("PLACEHOLDER_") ||
-    /^#[a-zA-Z0-9_-]*$/.test(value) ||
-    (/^\/?assets\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes(".."))
-  )
-    return true;
-  try {
-    const url = new URL(value);
-    return (
-      ["http:", "https:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password
-    );
-  } catch {
-    return false;
-  }
 }
 export function validateDraft(fields, draft) {
   const errors = {};
@@ -255,15 +291,17 @@ export function validateDraft(fields, draft) {
         "Đường dẫn chỉ dùng chữ thường không dấu, số và dấu gạch nối (tối đa 160 ký tự).";
     else if (field.options && !field.options.some(([key]) => key === value))
       errors[field.key] = "Vui lòng chọn một giá trị hợp lệ.";
-    else if (field.url && !validLink(value))
-      errors[field.key] =
-        "Chỉ dùng URL http/https, đường dẫn assets/…, liên kết # hoặc placeholder hiện tại.";
     else if (
-      field.key === "hotline" &&
-      value &&
-      !value.startsWith("PLACEHOLDER_") &&
-      !/^\+?[\d ()-]{3,30}$/.test(value)
+      field.url &&
+      !(field.key === "imageUrl" || field.key === "logoUrl"
+        ? validImage(value)
+        : ["zaloUrl", "facebookUrl", "mapUrl"].includes(field.key)
+          ? contact(value)
+          : target(value))
     )
+      errors[field.key] =
+        "Liên kết sai mục đích: ảnh dùng assets/, /uploads/ hoặc HTTP/HTTPS; liên hệ dùng HTTP/HTTPS; CTA dùng section hoặc trang chi tiết.";
+    else if (field.key === "hotline" && !phone(value))
       errors[field.key] = "Số điện thoại không hợp lệ.";
     else if (
       field.type === "datetime-local" &&
@@ -277,6 +315,15 @@ export function validateDraft(fields, draft) {
         .filter((x) => x.trim()).length > 100
     )
       errors[field.key] = "Chỉ nhập tối đa 100 món.";
+    else if (
+      field.type === "gallery" &&
+      (value.length > 30 || !value.every((v) => v && validImage(v)))
+    )
+      errors[field.key] = "Gallery cần ảnh hợp lệ, tối đa 30 ảnh.";
+    else if (field.type === "menu" && !validMenu(value))
+      errors[field.key] = "Kiểm tra tên, giá và ảnh từng món.";
+    else if (field.type === "document" && !validDoc(value))
+      errors[field.key] = "Kiểm tra nội dung, ảnh và liên kết bài viết.";
     else if (typeof value === "string" && value.length > 20000)
       errors[field.key] = "Nội dung không được vượt quá 20.000 ký tự.";
   }
@@ -286,7 +333,12 @@ export function payloadFor(config, draft, original) {
   const initial = original ? draftFor(config, original) : null;
   return Object.fromEntries(
     config.fields
-      .filter((field) => !initial || draft[field.key] !== initial[field.key])
+      .filter(
+        (field) =>
+          !initial ||
+          JSON.stringify(draft[field.key]) !==
+            JSON.stringify(initial[field.key]),
+      )
       .map((field) => {
         const value = draft[field.key];
         return [

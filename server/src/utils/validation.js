@@ -1,6 +1,16 @@
+import {
+  image,
+  contact,
+  target,
+  phone,
+  validMenu,
+  validDoc,
+  settingDefaults,
+} from "../../../shared/content.js";
 import { HttpError } from "./errors.js";
 export const sections = ["restaurant", "cafe", "promotion", "experience"];
 export const configKeys = [
+  ...Object.keys(settingDefaults),
   "hotline",
   "zaloUrl",
   "facebookUrl",
@@ -23,29 +33,15 @@ const slug = (v) =>
   typeof v === "string" &&
   /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v) &&
   v.length <= 160;
-export const link = (v) =>
-  text(v) &&
-  (v === "" ||
-    v.startsWith("PLACEHOLDER_") ||
-    /^#[a-zA-Z0-9_-]*$/.test(v) ||
-    (/^\/?assets\/[a-zA-Z0-9_./-]+$/.test(v) && !v.includes("..")) ||
-    (() => {
-      try {
-        const u = new URL(v);
-        return (
-          ["http:", "https:"].includes(u.protocol) && !u.username && !u.password
-        );
-      } catch {
-        return false;
-      }
-    })());
+export const link = target;
 const common = {
   sortOrder: integer(0),
   isActive: (v) => typeof v === "boolean",
-  imageUrl: link,
+  imageUrl: image,
 };
 const schemas = {
   rooms: {
+    gallery: (v) => Array.isArray(v) && v.length <= 30 && v.every(image),
     name: requiredText,
     slug,
     description: text,
@@ -63,7 +59,7 @@ const schemas = {
     description: text,
     badge: text,
     ctaText: text,
-    ctaTarget: link,
+    ctaTarget: target,
     ...common,
   },
   news: {
@@ -72,8 +68,9 @@ const schemas = {
     title: requiredText,
     excerpt: text,
     content: text,
-    imageUrl: link,
-    href: link,
+    contentDoc: validDoc,
+    imageUrl: image,
+    href: target,
     publishedAt: (v) =>
       typeof v === "string" &&
       /^\d{4}-\d{2}-\d{2}(?:T.*)?$/.test(v) &&
@@ -87,8 +84,9 @@ const schemas = {
     subtitle: text,
     description: text,
     ctaText: text,
-    ctaTarget: link,
+    ctaTarget: target,
     q: integer(0, 3),
+    menuItems: validMenu,
     dishes: (v) => Array.isArray(v) && v.length <= 100 && v.every(requiredText),
     ...common,
   },
@@ -147,15 +145,16 @@ export function siteConfig(body) {
   for (const [key, value] of Object.entries(body)) {
     if (!configKeys.includes(key) || !text(value))
       fail(`Invalid config: ${key}`);
-    if (["zaloUrl", "facebookUrl", "mapUrl"].includes(key) && !link(value))
+    if (["zaloUrl", "facebookUrl", "mapUrl"].includes(key) && !contact(value))
       fail(`Invalid URL: ${key}`);
+    if (key === "hotline" && !phone(value)) fail("Số điện thoại không hợp lệ");
+    if (key === "logoUrl" && !image(value))
+      fail("Đường dẫn ảnh logo không hợp lệ");
     if (
-      key === "hotline" &&
-      value &&
-      !value.startsWith("PLACEHOLDER_") &&
-      !/^\+?[\d ()-]{3,30}$/.test(value)
+      (key.endsWith("Enabled") || key === "contentConfirmed") &&
+      !["true", "false"].includes(value)
     )
-      fail("Invalid hotline");
+      fail("Chọn true hoặc false");
   }
   return body;
 }

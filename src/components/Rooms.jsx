@@ -1,3 +1,6 @@
+import { SectionHeading } from "./ManagedContent.jsx";
+import { BusinessNotice } from "./ManagedContent.jsx";
+import { assetUrl } from "../data/data.js";
 import { useState } from "react";
 import { viewNames, money, today, nextDay, displayDate } from "../data/data.js";
 
@@ -89,10 +92,12 @@ export default function Rooms({
   return (
     <section id="phong-nghi" className="section container">
       <div className="section-head">
-        <div>
-          <p className="eyebrow red">PHÒNG NGHỈ</p>
-          <h2>Một căn phòng cho mỗi chuyến đi.</h2>
-        </div>
+        <SectionHeading
+          id="phong-nghi"
+          title="Một căn phòng cho mỗi chuyến đi."
+          subtitle="PHÒNG NGHỈ"
+          description=""
+        />
         <button className="text-link" id="all-rooms" onClick={onAllRooms}>
           Xem tất cả phòng
         </button>
@@ -144,7 +149,7 @@ export default function Rooms({
             <RoomCard room={list[0]} main onRoom={onRoom} />
             {list.length > 1 && (
               <div className="room-side">
-                {list.slice(1).map((room) => (
+                {list.slice(1, 4).map((room) => (
                   <RoomCard key={room.id} room={room} onRoom={onRoom} />
                 ))}
               </div>
@@ -160,17 +165,43 @@ export default function Rooms({
           </div>
         )}
       </div>
-      <p className="demo-note">
-        Bản demo: tên hạng, số lượng phòng và giá là minh họa. Số phòng thể hiện
-        tổng số của hạng, không phải số phòng còn trống.
-      </p>
+      <BusinessNotice />
     </section>
   );
 }
 export function RoomDetails({ room, onConsult, onAllRooms }) {
+  const images = [room.image, ...(room.gallery || [])].filter(
+    (v, i, a) => v && a.indexOf(v) === i,
+  );
+  const [selected, setSelected] = useState(0);
   return (
     <>
-      <Photo room={room} className="modal-room-photo" />
+      <Photo
+        room={{
+          ...room,
+          image: images[selected] || room.image,
+          q: selected === 0 ? room.q : 0,
+        }}
+        className="modal-room-photo"
+      />
+      <div className="room-gallery" role="group" aria-label="Gallery phòng">
+        {images.map((image, i) => (
+          <button
+            key={i}
+            onClick={() => setSelected(i)}
+            aria-label={`Xem ảnh phòng ${i + 1}`}
+            aria-pressed={i === selected}
+          >
+            <img
+              src={assetUrl(image)}
+              alt={`Ảnh ${i + 1}`}
+              onError={(e) => {
+                e.currentTarget.alt = "Ảnh không tải được";
+              }}
+            />
+          </button>
+        ))}
+      </div>
       <div className="detail-stats">
         <div>
           <strong>{String(room.count).padStart(2, "0")} phòng</strong>
@@ -187,10 +218,7 @@ export function RoomDetails({ room, onConsult, onAllRooms }) {
       </div>
       <p>{room.description}</p>
       <Price room={room} />
-      <div className="form-notice">
-        Số lượng, sức chứa, tên và giá phòng là dữ liệu minh họa. Đây không phải
-        thông báo còn phòng hay báo giá đã được xác nhận.
-      </div>
+      <BusinessNotice />
       <div className="modal-buttons">
         <button
           className="button"

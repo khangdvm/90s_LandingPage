@@ -2,7 +2,17 @@ import { apiRequest } from "./apiClient.js";
 export const adminApi = {
   login: (body) =>
     apiRequest("/login", { method: "POST", body, authenticated: false }),
-  list: (resource, signal) => apiRequest(`/${resource}`, { signal }),
+  list: (resource, signal, query) =>
+    apiRequest(`/${resource}${query ? "?" + new URLSearchParams(query) : ""}`, {
+      signal,
+    }),
+  upload: (file) => {
+    const body = new FormData();
+    body.append("image", file);
+    return apiRequest("/uploads", { method: "POST", body });
+  },
+  get: (resource, id, signal) =>
+    apiRequest(`/${resource}/${encodeURIComponent(id)}`, { signal }),
   create: (resource, body) =>
     apiRequest(`/${resource}`, { method: "POST", body }),
   update: (resource, id, body) =>

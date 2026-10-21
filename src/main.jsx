@@ -1,6 +1,7 @@
 import { lazy, StrictMode, Suspense, useEffect } from "react";
 import { createRoot } from "react-dom/client";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import DetailPage, { NotFound } from "./components/DetailPage.jsx";
 import App from "./App.jsx";
 import "./styles/styles.css";
 const AdminRoutes = lazy(() => import("./admin/AdminRoutes.jsx"));
@@ -11,20 +12,25 @@ function PublicSite() {
   }, []);
   return <App />;
 }
+const router = createBrowserRouter(
+  [
+    {
+      path: "/admin/*",
+      element: (
+        <Suspense fallback={<p role="status">Đang tải trang quản trị…</p>}>
+          <AdminRoutes />
+        </Suspense>
+      ),
+    },
+    { path: "/", element: <PublicSite /> },
+    { path: "/phong/:slug", element: <DetailPage kind="room" /> },
+    { path: "/tin-tuc/:slug", element: <DetailPage kind="news" /> },
+    { path: "*", element: <NotFound /> },
+  ],
+  { basename: base.startsWith("/") ? base : "/" },
+);
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <BrowserRouter basename={base.startsWith("/") ? base : "/"}>
-      <Routes>
-        <Route
-          path="/admin/*"
-          element={
-            <Suspense fallback={<p role="status">Đang tải trang quản trị…</p>}>
-              <AdminRoutes />
-            </Suspense>
-          }
-        />
-        <Route path="*" element={<PublicSite />} />
-      </Routes>
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </StrictMode>,
 );

@@ -24,6 +24,8 @@ test(
   "PostgreSQL CMS integration",
   { skip: process.env.RUN_DB_TESTS !== "1" },
   async (t) => {
+    if (!new URL(process.env.DATABASE_URL).pathname.endsWith("_test"))
+      throw new Error("Dedicated _test database required");
     const { PrismaClient } = await import("@prisma/client");
     const db = new PrismaClient();
     const app = createApp({ db, jwtSecret: process.env.JWT_SECRET });

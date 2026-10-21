@@ -1,3 +1,4 @@
+import { serveUploads, uploadRoutes } from "./routes/uploads.js";
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
@@ -38,6 +39,8 @@ export function createApp({
     if (req.method === "POST" && req.path === "/login") return next();
     return requireAdmin(db, jwtSecret)(req, res, next);
   });
+  app.use("/uploads", serveUploads);
+  app.use("/api/admin", uploadRoutes());
   app.use(express.json({ limit: "256kb", strict: true }));
   app.use("/api/admin", adminRoutes(db, jwtSecret));
   app.use("/api", publicRoutes(db));

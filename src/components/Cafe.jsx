@@ -1,3 +1,5 @@
+import { SectionHeading } from "./ManagedContent.jsx";
+import { BusinessNotice, useContent } from "./ManagedContent.jsx";
 import ContentPhoto from "./ContentPhoto.jsx";
 import ContentAction from "./ContentAction.jsx";
 import PublicState from "./PublicState.jsx";
@@ -24,16 +26,16 @@ function CafeCard({ card, className = "", onCafe, onConsult }) {
 }
 export default function Cafe({ resource, onCafe, onConsult }) {
   const cards = resource.data || [];
+  const settings = useContent();
   return (
     <section id="ca-phe" className="section container">
       <div className="section-head">
-        <div>
-          <p className="eyebrow red">CÀ PHÊ · SẮP RA MẮT</p>
-          <h2>Không chỉ là một ly cà phê.</h2>
-          <p className="section-description">
-            Một góc ngồi, một món uống, một khoảng trời để ngắm.
-          </p>
-        </div>
+        <SectionHeading
+          id="ca-phe"
+          title="Không chỉ là một ly cà phê."
+          subtitle={settings.cafeStatus}
+          description="Một góc ngồi, một món uống, một khoảng trời để ngắm."
+        />
       </div>
       {resource.loading || resource.error || !cards.length ? (
         <PublicState resource={resource} label="cà phê" empty={!cards.length} />
@@ -57,13 +59,12 @@ export default function Cafe({ resource, onCafe, onConsult }) {
           </div>
         </div>
       )}
-      <p className="demo-note">
-        Hình ảnh ý tưởng · Thông tin khai trương sẽ được cập nhật.
-      </p>
+      <BusinessNotice />
     </section>
   );
 }
 export function CafeDetail({ card, cards, onCafe }) {
+  const settings = useContent();
   return (
     <>
       <ContentPhoto
@@ -72,12 +73,9 @@ export function CafeDetail({ card, cards, onCafe }) {
         label={`Ảnh ${card.title}`}
         as="div"
       />
-      <p className="eyebrow red">CÀ PHÊ · SẮP RA MẮT</p>
+      <p className="eyebrow red">{settings.cafeStatus}</p>
       <p className="public-text">{card.description}</p>
-      <div className="form-notice">
-        Hình ảnh ý tưởng. Không gian, menu và lịch khai trương sẽ được cập nhật
-        khi có thông tin chính thức.
-      </div>
+      <BusinessNotice />
       <div className="modal-menu-tabs">
         {cards.map((item) => (
           <button

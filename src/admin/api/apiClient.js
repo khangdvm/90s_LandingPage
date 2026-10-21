@@ -33,7 +33,9 @@ function errorMessage(status, detail) {
   if (status === 401)
     return "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.";
   if (status === 409)
-    return "Đường dẫn này đã tồn tại. Vui lòng chọn đường dẫn khác.";
+    return detail?.startsWith("Nội dung đã")
+      ? detail
+      : "Đường dẫn này đã tồn tại. Vui lòng chọn đường dẫn khác.";
   if (status === 404)
     return "Nội dung không còn tồn tại. Vui lòng tải lại danh sách.";
   if (status === 429)
@@ -76,10 +78,14 @@ export async function apiRequest(
       cache: "no-store",
       headers: {
         Accept: "application/json",
-        ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+        ...(body !== undefined && !(body instanceof FormData)
+          ? { "Content-Type": "application/json" }
+          : {}),
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+      ...(body !== undefined
+        ? { body: body instanceof FormData ? body : JSON.stringify(body) }
+        : {}),
     });
   } catch (error) {
     if (error.name === "AbortError") throw error;

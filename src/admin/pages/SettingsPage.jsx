@@ -1,3 +1,5 @@
+import { useDraft } from "../hooks/useDraft.jsx";
+import { settingDefaults } from "../../../shared/content.js";
 import { useEffect, useRef, useState } from "react";
 import { adminApi } from "../api/adminApi.js";
 import { settingFields, validateDraft } from "../forms.js";
@@ -12,6 +14,13 @@ export default function SettingsPage() {
     [busy, setBusy] = useState(false),
     [reload, setReload] = useState(0);
   const form = useRef(null);
+  const protection = useDraft(
+    "settings",
+    values,
+    initial,
+    setValues,
+    JSON.stringify(initial),
+  );
   useEffect(() => {
     const controller = new AbortController();
     setValues(null);
@@ -20,7 +29,10 @@ export default function SettingsPage() {
       .settings(controller.signal)
       .then((data) => {
         const values = Object.fromEntries(
-          settingFields.map((field) => [field.key, data[field.key] || ""]),
+          settingFields.map((field) => [
+            field.key,
+            data[field.key] ?? settingDefaults[field.key] ?? "",
+          ]),
         );
         setValues(values);
         setInitial(values);
@@ -42,6 +54,10 @@ export default function SettingsPage() {
       );
       return;
     }
+    if (form.current?.querySelector('[data-upload-busy="true"]')) {
+      setError("Chờ upload ảnh hoàn tất.");
+      return;
+    }
     const changed = Object.fromEntries(
       Object.entries(values).filter(([key, value]) => initial[key] !== value),
     );
@@ -51,10 +67,17 @@ export default function SettingsPage() {
     }
     setBusy(true);
     try {
-      const data = await adminApi.saveSettings(changed);
+      const data = await adminApi.saveSettings({
+        ...changed,
+        _snapshot: initial,
+      });
       const saved = Object.fromEntries(
-        settingFields.map((field) => [field.key, data[field.key] || ""]),
+        settingFields.map((field) => [
+          field.key,
+          data[field.key] ?? settingDefaults[field.key] ?? "",
+        ]),
       );
+      protection.clear();
       setValues(saved);
       setInitial(saved);
       setSuccess("Lưu thay đổi thành công.");
@@ -94,6 +117,7 @@ export default function SettingsPage() {
             Giữ placeholder nếu chưa có thông tin chính thức. Zalo và Facebook
             là liên kết liên hệ.
           </p>
+          {protection.recovery}
           <form ref={form} onSubmit={submit} noValidate>
             <div className="cms-form-grid">
               {settingFields.map((field) => (
@@ -122,6 +146,7 @@ export default function SettingsPage() {
                 className="cms-button cms-secondary"
                 disabled={busy}
                 onClick={() => {
+                  if (!protection.discard()) return;
                   setValues(initial);
                   setErrors({});
                   setError("");

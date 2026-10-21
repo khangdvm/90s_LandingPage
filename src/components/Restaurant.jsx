@@ -1,3 +1,6 @@
+import { SectionHeading } from "./ManagedContent.jsx";
+import { BusinessNotice, useContent } from "./ManagedContent.jsx";
+import { assetUrl, money } from "../data/data.js";
 import ContentPhoto from "./ContentPhoto.jsx";
 import ContentAction from "./ContentAction.jsx";
 import PublicState from "./PublicState.jsx";
@@ -8,13 +11,12 @@ export default function Restaurant({ resource, onMenu, onConsult }) {
     <section id="nha-hang" className="dining section">
       <div className="container">
         <div className="section-head">
-          <div>
-            <p className="eyebrow red">NHÀ HÀNG 90s</p>
-            <h2>
-              Một bàn đầy món,
-              <br className="mobile-break" /> một bữa đầy vui.
-            </h2>
-          </div>
+          <SectionHeading
+            id="nha-hang"
+            title="Một bàn đầy món, một bữa đầy vui."
+            subtitle="NHÀ HÀNG 90s"
+            description=""
+          />
           <div className="head-actions">
             <button
               className="button outline"
@@ -83,12 +85,21 @@ export default function Restaurant({ resource, onMenu, onConsult }) {
             </ContentAction>
           </div>
         )}
-        <p className="demo-note">Hình ảnh và thực đơn minh họa cho bản demo.</p>
+        <BusinessNotice />
       </div>
     </section>
   );
 }
 export function MenuDetail({ card, cards, onMenu, onConsult }) {
+  const settings = useContent();
+  const menu = card.menuItems?.length
+    ? card.menuItems
+    : card.dishes.map((name, sortOrder) => ({
+        name,
+        price: null,
+        sortOrder,
+        isActive: true,
+      }));
   return (
     <>
       <div className="modal-menu-tabs" role="group" aria-label="Nhóm món">
@@ -114,18 +125,33 @@ export function MenuDetail({ card, cards, onMenu, onConsult }) {
         <h3>{card.title}</h3>
         <p className="public-text">{card.description}</p>
         <ul className="menu-dishes">
-          {card.dishes.map((name, index) => (
-            <li key={`${name}-${index}`}>
-              {name}
-              <span>Giá cập nhật sau</span>
-            </li>
-          ))}
+          {menu
+            .filter((x) => x.isActive)
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((dish, index) => (
+              <li key={index}>
+                <div>
+                  {assetUrl(dish.imageUrl) && (
+                    <img
+                      className="menu-thumbnail"
+                      src={assetUrl(dish.imageUrl)}
+                      alt={dish.name}
+                    />
+                  )}
+                  <strong>{dish.name}</strong>
+                  {dish.description && <p>{dish.description}</p>}
+                </div>
+                <span>
+                  {dish.price == null
+                    ? settings.unpricedLabel
+                    : money(dish.price)}
+                  {dish.unit ? " / " + dish.unit : ""}
+                </span>
+              </li>
+            ))}
         </ul>
       </div>
-      <div className="form-notice">
-        Món ăn và hình ảnh là gợi ý minh họa, chưa phải thực đơn bán hàng chính
-        thức.
-      </div>
+      <BusinessNotice />
       <button
         className="button menu-contact"
         onClick={() => onConsult(null, "table")}

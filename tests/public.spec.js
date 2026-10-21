@@ -199,7 +199,7 @@ test("admin publishes news -> category, server pagination and full article modal
       .getByLabel("Nội dung bài viết", { exact: true })
       .fill("Nội dung đầy đủ từ CMS.\nDòng thứ hai.");
     await page
-      .getByLabel("Ngày và giờ đăng", { exact: false })
+      .getByLabel("Ngày hiển thị trên bài", { exact: false })
       .fill("2026-10-13T12:00");
     await page.getByLabel("Đăng bài", { exact: true }).check();
     const created = page.waitForResponse(
@@ -229,15 +229,12 @@ test("admin publishes news -> category, server pagination and full article modal
       response.url().endsWith(`/api/news/${article.slug}`),
     );
     await page
-      .getByRole("button", { name: `Đọc thêm: ${title}`, exact: true })
+      .getByRole("link", { name: `Đọc thêm: ${title}`, exact: true })
       .click();
     expect((await detail).status()).toBe(200);
-    await expect(page.getByRole("dialog")).toContainText(
-      "Nội dung đầy đủ từ CMS.",
-    );
-    await page
-      .getByRole("button", { name: "Đóng cửa sổ", exact: true })
-      .click();
+    await expect(page.locator("main")).toContainText("Nội dung đầy đủ từ CMS.");
+    await page.goBack();
+    await page.getByRole("button", { name: "Về Tam Đảo", exact: true }).click();
     const next = page.waitForResponse((response) =>
       response.url().includes("/api/news?category=tam-dao&page=2&limit=6"),
     );
@@ -358,7 +355,10 @@ test("all four content sections use edited CMS text and menu dishes", async ({
         .getByLabel("Mô tả", { exact: true })
         .fill(`Mô tả CMS ${section}`);
       if (section === "restaurant")
-        await page.getByLabel("Danh sách món", { exact: true }).fill("Món CMS");
+        await page
+          .getByLabel("Tên món", { exact: true })
+          .first()
+          .fill("Món CMS");
       await save(page);
       await publicReady(page);
       if (section === "promotion") {
@@ -396,6 +396,7 @@ test("all four content sections use edited CMS text and menu dishes", async ({
         title: card.title,
         description: card.description,
         dishes: card.dishes,
+        menuItems: card.menuItems,
       });
     }
   }
@@ -427,7 +428,8 @@ test("valid empty CMS responses never resurrect demo data", async ({
       Object.fromEntries(Object.keys(config).map((key) => [key, ""])),
     );
     await page.goto("/");
-    await expect(page.locator("#news-status")).toContainText("0 bài viết");
+    await expect(page.locator("#tin-tuc")).toHaveCount(0);
+    await expect(page.locator('header a[href$="#tin-tuc"]')).toHaveCount(0);
     await expect(page.locator(".public-loading")).toHaveCount(0);
     await expect(page.locator(".hero-slide")).toHaveCount(0);
     await expect(page.locator("#room-layout .room-photo-button")).toHaveCount(
@@ -439,7 +441,7 @@ test("valid empty CMS responses never resurrect demo data", async ({
     await expect(page.locator("#news-grid article")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "Xem ưu đãi", exact: true }),
-    ).toBeDisabled();
+    ).toHaveCount(0);
     await expect(page).toHaveTitle("90s Homestay");
     await expect(page.locator("#map-link")).toHaveAttribute("href", "#");
     for (const link of await page.locator("#footer-contacts a").all())

@@ -1,148 +1,166 @@
-# 90s Homestay — React + Vite
+# 90s Homestay — website và CMS
 
-React public-site prototype with a separate CMS admin interface, converted from the supplied 90sLanding demo. Uses JavaScript functional components, hooks and plain CSS; preserves the original layout, red branding, typography and all frontend interactions.
+React 19 + Vite, Express 5, Prisma 6 và PostgreSQL. Website lấy nội dung qua API; admin ở `/admin`. Giữ phong cách thương hiệu hiện tại. Không có đặt phòng, kiểm tra phòng trống, thanh toán hay lưu yêu cầu tư vấn; các nút tư vấn mở kênh liên hệ hiện có.
 
-## Requirements and local run
+## Cài mới
 
-Use Node.js 22.12+ (or a newer supported LTS version) and npm.
+Cần Node.js ≥22.12, npm và PostgreSQL 17 (hoặc phiên bản PostgreSQL được Prisma 6 hỗ trợ). Chạy lệnh tại thư mục gốc repo. Giữ cả `server/` và `shared/` khi triển khai backend vì validation dùng chung.
 
-```sh
-cd 90s_LandingPage
-npm install
-npm run dev
+Có thể chạy PostgreSQL bằng Docker (tự đặt biến `POSTGRES_PASSWORD` trong shell hoặc secret manager trước):
+
+```bash
+docker run -d --name 90s-postgres \
+  -e POSTGRES_USER=cms -e POSTGRES_DB=homestay \
+  -e POSTGRES_PASSWORD \
+  -p 127.0.0.1:5432:5432 \
+  -v 90s-postgres-data:/var/lib/postgresql/data postgres:17
+npm ci
+npm --prefix server ci
+cp .env.example .env
+cp server/.env.example server/.env
 ```
 
-For a production build:
+Điền cấu hình trong các file `.env` cục bộ, không commit:
 
-```sh
-npm run build
-npm run preview
-```
+| Biến                                      | Ý nghĩa                                                                          |
+| ----------------------------------------- | -------------------------------------------------------------------------------- |
+| `DATABASE_URL`                            | URL PostgreSQL database ứng dụng đã tạo; tài khoản phải có quyền migration       |
+| `JWT_SECRET`                              | Secret ngẫu nhiên tối thiểu 32 byte, ví dụ tạo bằng `openssl rand -hex 32`       |
+| `PORT`                                    | Cổng API, mặc định 3000                                                          |
+| `FRONTEND_URL`                            | Origin frontend chính xác, ví dụ `http://localhost:5173`, không dấu `/` cuối     |
+| `SEED_ADMIN_EMAIL`, `SEED_ADMIN_PASSWORD` | Tài khoản tạo lần đầu; mật khẩu ≥12 ký tự, ≤72 byte; không dùng mật khẩu mẫu     |
+| `UPLOAD_DIR`                              | Đường dẫn tuyệt đối tới thư mục ảnh bền vững, tài khoản chạy server có quyền ghi |
+| `VITE_API_URL`                            | Origin API, ví dụ `http://localhost:3000`; phải đặt trước khi build              |
+| `VITE_BASE_PATH`                          | `/` mặc định; nếu dùng thư mục con phải bắt đầu và kết thúc bằng `/`             |
 
-Deploy the generated `dist/` directory to static hosting. Set `VITE_BASE_PATH=/subdirectory/` in the frontend environment when deploying within a subdirectory. The default is `/`; the absolute base supports direct admin routes. Use Vite or static hosting; opening the React source `index.html` through `file://` is not supported.
+Tạo thư mục `UPLOAD_DIR` trên volume bền vững, rồi:
 
-## CMS admin (quản trị nội dung)
-
-Các trang: `/admin/login`, `/admin`, `/admin/rooms`, `/admin/hero`, `/admin/news`, `/admin/content`, `/admin/settings`.
-
-Admin hỗ trợ thêm/sửa/xóa phòng, slide, tin tức, content cards; bật/tắt, thứ tự hiển thị, đăng/gỡ đăng bài, lọc chuyên mục/nhóm nội dung và cập nhật Hotline/Zalo/Facebook cùng các cài đặt website. Ảnh dùng URL/đường dẫn và có xem trước; chưa có upload. Content là văn bản thuần; không có chỉnh sửa HTML, CSS hay bố cục.
-
-**Website công khai đã kết nối CMS.** Nhân viên sửa nội dung trong `/admin`, lưu, rồi tải lại website công khai để thấy thay đổi. Website lấy dữ liệu mới từ API khi mở/tải lại trang; không cần sửa React source. Chỉ nội dung đang bật hoặc bài viết đã đăng được hiển thị.
-
-### Chạy local
-
-Cần Node.js 22.12+, PostgreSQL và một database development. Đặt các thông tin database/JWT/admin seed trong `server/.env` theo `server/.env.example`. Dùng JWT secret ngẫu nhiên ít nhất 32 bytes; mật khẩu seed dài ít nhất 12 ký tự, tối đa 72 bytes. Không đặt secret hoặc mật khẩu vào biến `VITE_*`.
-
-Backend, từ root repository:
-
-```sh
+```bash
 cd server
-npm ci
-cp .env.example .env
-# Điền DATABASE_URL, JWT_SECRET, SEED_ADMIN_EMAIL, SEED_ADMIN_PASSWORD.
-# FRONTEND_URL=http://localhost:5173; PORT=3000.
-npx prisma generate
-npx prisma migrate dev
+npx prisma validate
+npm run prisma:generate
+npm run migrate:deploy
 npm run seed
-npm run dev
+npm start
 ```
 
-Ở terminal khác, từ root repository:
+Seed dành cho cài mới: tạo admin và dữ liệu **mẫu chưa xác nhận**. Seed lặp lại không ghi đè bản ghi/password đã có, nhưng vẫn có thể thêm bản ghi mẫu còn thiếu; vì vậy không chạy seed thường xuyên trên website đang vận hành.
 
-```sh
+Mở terminal khác tại gốc repo:
+
+```bash
+npm run dev -- --host 0.0.0.0
+curl --fail http://localhost:3000/api/health
+```
+
+Đăng nhập `/admin` bằng tài khoản đã cấu hình. Xác minh nội dung theo [danh sách của chủ website](docs/NOI-DUNG-CAN-XAC-NHAN.md) trước công khai. Mặc định nhãn mẫu được bật; chỉ đổi “Trạng thái xác nhận toàn bộ nội dung” sau khi rà soát toàn bộ dữ liệu.
+
+## Nâng cấp mà giữ dữ liệu
+
+1. Sao lưu PostgreSQL (`pg_dump -Fc`) và thư mục ảnh; xác minh bản sao lưu có thể phục hồi trên database riêng. Ghi lại cấu hình `.env`, quyền và mount volume.
+2. Đưa mã mới lên; giữ nguyên database và `UPLOAD_DIR`. Cài dependency theo lockfile.
+3. Chạy các lệnh bên dưới. Migration mới chỉ thêm `Room.gallery`, `News.contentDoc`, `ContentCard.menuItems`; chuyển tên món cũ sang JSON, **không xóa `dishes`, `content`, `imageUrl`, `q` hoặc bản ghi cũ**.
+4. Khởi động backend mới sau khi generate/migrate; build và triển khai frontend với đúng API origin. Kiểm tra health, đăng nhập, chỉnh thử một bản ghi và đối chiếu public.
+
+```bash
 npm ci
-cp .env.example .env
-# VITE_API_URL=http://localhost:3000; VITE_BASE_PATH=/.
-npm run dev
-```
-
-Mở `http://localhost:5173/admin/login`, đăng nhập bằng tài khoản đã seed. Với setup đã có `.env`, giữ nguyên tệp đó; không ghi đè bằng tệp example. JWT chỉ lưu trong `sessionStorage` của tab; mật khẩu không được lưu. Trang quản trị kiểm tra hạn token, backend xác minh chữ ký; phản hồi 401 xóa phiên và đưa về đăng nhập. Logout xóa token. Thời hạn phiên theo backend hiện tại là 2 giờ.
-
-### Build và deploy
-
-```sh
+npm --prefix server ci
+cd server
+npx prisma validate
+npm run prisma:generate
+npm run migrate:deploy
+npx prisma migrate status
+cd ..
 npm run build
-npm run preview
 ```
 
-Production cần đặt `VITE_API_URL` vào địa chỉ backend thực tế trước khi build, và `FRONTEND_URL` của backend vào đúng origin frontend. Khi dùng subdirectory, đặt `VITE_BASE_PATH=/90s/` (có dấu `/` đầu và cuối), rồi truy cập `/90s/admin/login`. Static hosting phải trả `index.html` cho các đường dẫn React như `/admin/login` và `/admin/rooms`; API được phục vụ riêng bởi backend. CSS admin được giới hạn phạm vi, admin được tải riêng qua lazy import; website công khai giữ bố cục, lớp CSS và tương tác hiện tại, với dữ liệu lấy từ CMS.
+**Không dùng `prisma migrate reset`, không reset database, không chạy seed để nâng cấp.** Không chỉnh migration đã áp dụng. Nếu cần quay lại phiên bản ứng dụng cũ, các cột mới vẫn tương thích với ứng dụng cũ; dữ liệu chỉnh bằng editor mới nằm trong các cột mới, nên chỉ bản mới hiển thị đầy đủ. Không tự động xóa các cột để rollback.
 
-### Kiểm thử trình duyệt với backend thật
+## Sử dụng CMS
 
-`npm run test:e2e` dùng Playwright, mở backend test ở port 3100 và Vite ở port 5175, chạy tuần tự. Không dùng API mock. Dùng một **database test riêng có tên kết thúc bằng `_test`**, đã áp dụng migration và seed, không dùng database production. User database test cần quyền đổi tên bảng để kiểm tra lỗi endpoint thật; bảng luôn được phục hồi sau kiểm thử. Truyền các biến môi trường từ cấu hình test riêng của bạn:
+- Danh sách phòng, hero, tin, nội dung có tìm kiếm, lọc trạng thái/nhóm, phân trang server và tổng số bản ghi. Có xác nhận xóa; sau xóa trang cuối được điều chỉnh.
+- Chọn ảnh từ máy (JPEG/PNG/WebP, tối đa 8 MB), chờ upload hoàn tất rồi lưu. File được giải mã và tái mã hóa WebP, tối đa cạnh 2400 px; ảnh nguồn tối đa 40 triệu pixel. Có preview, thay, bỏ và thử lại. URL HTTP(S) hoặc assets cũ vẫn dùng được. SVG chỉ dùng assets/URL có sẵn; không nhận upload SVG.
+- Phòng có ảnh chính và gallery: thêm ảnh, đưa lên, xóa khỏi gallery, hoặc chọn “Dùng làm ảnh đại diện”. Tham số collage cũ được giữ ở database nhưng không hiện trong thao tác thường ngày.
+- Thực đơn là các món có tên, giá tùy chọn, đơn vị, mô tả, ảnh, bật/tắt và thứ tự. **Giá trống khác giá 0**. Nhãn chưa có giá nằm trong Cài đặt. Dữ liệu `dishes` cũ được giữ để tương thích.
+- Tin tức có editor từng khối: đoạn văn, tiêu đề, danh sách (mỗi dòng một mục), ảnh; đậm/nghiêng/link áp dụng cả khối. Có preview. Không nhập HTML; chuỗi HTML được hiển thị như văn bản. Bài cũ vẫn giữ nguyên xuống dòng. Khi có các khối, chúng được ưu tiên hiển thị; xóa hết khối sẽ trở về nội dung thuần cũ.
+- Ngày hiển thị trên bài chỉ là thông tin mô tả, **không hẹn giờ**. “Đăng bài” công khai ngay; “Gỡ đăng” chặn API public. Slug mới tự gợi ý; slug bản ghi đang có không tự thay khi đổi tiêu đề. Trùng slug được báo lỗi; đổi slug đã chia sẻ sẽ làm link cũ mất hiệu lực.
+- Cài đặt quản lý thương hiệu/logo/footer, liên hệ, thông báo, trạng thái cà phê, title/subtitle/description và bật/tắt section. Để trống các trường section sẽ dùng phần giới thiệu mặc định. Section dữ liệu rỗng tự ẩn và bỏ khỏi menu. CTA trỏ tới section đã ẩn không được hiển thị.
+- Form ghi bản nháp vào localStorage theo tài khoản và màn hình/bản ghi. Sau refresh hoặc đăng nhập lại chọn “Khôi phục bản nháp”. Nếu phiên bản server khác, giao diện cảnh báo trước khi khôi phục; PATCH cũng kiểm tra phiên bản, tránh ghi đè một chỉnh sửa mới hơn. Phải đối chiếu/hợp nhất thủ công khi conflict.
+- Điều hướng, hủy và đóng/refresh tab có cảnh báo thay đổi chưa lưu (beforeunload tùy trình duyệt). Lưu thành công hoặc chủ động bỏ sẽ xóa bản nháp tương ứng. Bản nháp ở trình duyệt hiện tại, không đồng bộ thiết bị và không lưu JWT vào localStorage. Trên máy dùng chung cần xóa dữ liệu trình duyệt sau khi hoàn tất; các bản nháp của tài khoản khác không tự được phục hồi.
 
-- `DATABASE_URL`, `JWT_SECRET`: kết nối và secret dành cho test.
-- `E2E_ADMIN_EMAIL`, `E2E_ADMIN_PASSWORD`: tài khoản đã seed trong database test.
+## Lưu ảnh và triển khai
 
-Nếu chưa có Chromium, chạy `npx playwright install chromium`. Cấu hình tự dùng system Chromium ở `/usr/lib/chromium/chromium` khi có, hoặc có thể đặt `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`.
+`UPLOAD_DIR` phải nằm trên volume **ngoài `dist/` và thư mục release tạm**, ví dụ `/var/lib/90s-homestay/uploads`. Thư mục mặc định khi chạy trong `server/` là `server/storage/uploads`; không phù hợp môi trường container mất dữ liệu sau redeploy nếu không mount volume.
 
-```sh
+Backend trả `/uploads/<uuid>.webp`; frontend tự nối API origin nên chạy được khi FE và BE khác origin. API xác thực upload trước khi đọc file, kiểm tra MIME và giải mã nội dung; không dùng tên file người dùng. Header `Cross-Origin-Resource-Policy: cross-origin` áp dụng cho ảnh; CORS API chỉ cho `FRONTEND_URL`. Đặt HTTPS cho cả hai origin khi triển khai. Reverse proxy không được thay CORP ảnh thành `same-origin`.
+
+Bỏ/thay ảnh chỉ đổi liên kết trong nội dung, **không xóa file vật lý** vì ảnh có thể được dùng chung hoặc còn nằm trong bản nháp. Backup ảnh cùng database. Dọn ảnh không tham chiếu là thao tác vận hành thủ công sau khi đối chiếu toàn bộ nội dung và bản sao lưu; không có tác vụ GC tự chạy. Phiên bản này dùng filesystem, chưa tích hợp S3/CDN; nhiều backend replica cần shared volume.
+
+Ví dụ Nginx khi FE và API cùng domain (thay đường dẫn build/cổng phù hợp):
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name example.com;
+    root /srv/90s/dist;
+    client_max_body_size 10m;
+    # Cấu hình ssl_certificate và ssl_certificate_key của domain.
+    location /api/ { proxy_pass http://127.0.0.1:3000; }
+    location /uploads/ { proxy_pass http://127.0.0.1:3000; }
+    location / { try_files $uri $uri/ /index.html; }
+}
+```
+
+`/phong/:slug`, `/tin-tuc/:slug`, `/admin/*` cần fallback `index.html`; `/api` và `/uploads` phải được chuyển tới backend, không trả HTML. Khi deploy khác domain, cấu hình tương tự trên API domain và đặt `FRONTEND_URL` bằng FE origin. Hosting tĩnh cũng cần SPA rewrite tương đương. Thư mục con cần fallback về `<base>/index.html`.
+
+Trang chi tiết cập nhật title, description, canonical và Open Graph bằng JavaScript. Đây là **CSR**, crawler/social preview không chạy JS có thể chỉ thấy metadata trong HTML gốc. Trang 404 của SPA là trạng thái giao diện, hosting fallback thường vẫn trả HTTP 200. Muốn SEO/social preview và HTTP status đầy đủ cần prerender/SSR hoặc xử lý hosting riêng; chưa triển khai trong bản này.
+
+## API
+
+Public, không gửi JWT:
+
+- `GET /api/health`
+- `GET /api/rooms`, `GET /api/rooms/:slug` (chỉ phòng bật)
+- `GET /api/hero-slides`
+- `GET /api/news?page=1&limit=6&category=90s`, `GET /api/news/:slug` (chỉ đã đăng)
+- `GET /api/content/:section` (`restaurant`, `cafe`, `promotion`, `experience`)
+- `GET /api/site-config`
+
+Admin: `POST /api/admin/login` nhận `{email,password}`, trả JWT hạn 2 giờ. Các endpoint sau cần `Authorization: Bearer <token>`:
+
+- `GET/POST /api/admin/{rooms|hero-slides|news|content}`
+- `GET/PATCH/DELETE /api/admin/{resource}/:id`
+- `GET/PATCH /api/admin/site-config`
+- `POST /api/admin/uploads`, multipart field `image`, trả `{url}`.
+
+Danh sách CMS dùng `page`, `limit` (≤50), `search` (≤200 ký tự), `status=true|false`, `category` cho news hoặc `section` cho content. Kết quả `{data,pagination:{page,limit,total,totalPages}}`. API GET danh sách không query vẫn trả array để tương thích client cũ; UI mới luôn dùng phân trang. PATCH editor gửi `_version` là `updatedAt` đã đọc; PATCH settings gửi `_snapshot` là object cấu hình đã đọc, trả 409 nếu có thay đổi. API lỗi không trả chi tiết database.
+
+Các model Prisma: `Admin`, `Room`, `HeroSlide`, `News`, `ContentCard`, `SiteConfig`. Gallery/rich document/menu là JSON có validator whitelist tại `shared/content.js`; không lưu HTML tùy ý.
+
+## Kiểm thử
+
+Tạo **database test riêng có tên kết thúc `_test`**, cấu hình DATABASE_URL/JWT_SECRET/SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD trong môi trường shell an toàn, rồi migrate/seed database đó. Không trỏ test vào production; test có CRUD và fault injection đổi tên bảng tạm thời trên DB test.
+
+```bash
+cd server
+npm run prisma:generate
+npm run migrate:deploy
+npm run seed
+RUN_DB_TESTS=1 npm test
+cd ..
+# E2E_ADMIN_EMAIL/E2E_ADMIN_PASSWORD là cùng tài khoản seed của DB test.
+# Cần Chromium của hệ thống hoặc cài bằng: npx playwright install chromium
 npm run test:e2e
-# Hoặc chạy riêng: npm run test:admin / npm run test:public
-```
-
-Để kiểm tra bản production trên cùng backend test:
-
-```sh
+# Hoặc kiểm thử bundle production, với API test cổng 3100:
 VITE_API_URL=http://localhost:3100 npm run build
 E2E_USE_PREVIEW=1 npm run test:e2e
-# Hoặc chạy riêng: npm run test:admin / npm run test:public
+git diff --check
 ```
 
-Kiểm thử bao gồm đăng nhập đúng/sai, logout, route bảo vệ, dashboard, CRUD cho cả bốn nhóm, publish/unpublish, cài đặt, validation, phản hồi 401 thật, lỗi kết nối/retry, responsive 375/768/1440 px và thao tác website công khai sau khi rời admin. Bộ public còn kiểm tra admin → database → public cho phòng, hero, tin tức, liên hệ/SEO và cả bốn nhóm nội dung; kết quả API rỗng; lỗi database thật và retry; viewport 320 px; keyboard/swipe/pause/autoplay/reduced-motion của slider. Dữ liệu CRUD tạm được xóa; cài đặt test được phục hồi. `test-results/` và `playwright-report/` được Git ignore. Kiểm thử backend hiện có vẫn chạy riêng theo `server/README.md`.
+Playwright tự mở API cổng 3100 và FE cổng 5175, chạy tuần tự. Nếu hệ thống không có Chromium tại `/usr/lib/chromium/chromium`, dùng browser Playwright đã cài hoặc biến `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH`. Không bật `RUN_DB_TESTS=1` thì test tích hợp DB bị skip, không phải pass. Khi test lỗi timeout có thể cần xóa **chỉ bản ghi QA được test tạo** trên DB test trước khi chạy lại; không reset DB ứng dụng.
 
-## Structure
+Xem [kết quả kiểm thử](docs/KET-QUA-KIEM-THU.md), [bảng đối chiếu yêu cầu](docs/DOI-CHIEU-YEU-CAU.md) và [nội dung cần xác nhận](docs/NOI-DUNG-CAN-XAC-NHAN.md).
 
-- `src/main.jsx`: React root and CSS import.
-- `src/App.jsx`: shared room/date state and modal routing.
-- `src/components/`: Header, HeroSlider, About, Rooms, Restaurant, Cafe, Offers, News, ConsultationModal and Footer. Related detail views are exported alongside their section components.
-- `src/api/`: API URL dùng chung, public client, endpoint helpers và adapters.
-- `src/hooks/usePublicResource.js`: tải dữ liệu độc lập theo section, abort request cũ, trạng thái loading/error và retry.
-- `src/data/data.js`: helper ảnh, ngày, giá và nhãn view; không có dữ liệu CMS chính.
-- `src/data/SiteConfigContext.jsx`: chia sẻ cài đặt liên hệ từ public API.
-- `src/data/demoFixtures.js`: fixture lịch sử để kiểm tra seed; không được import vào website đang chạy.
-- `src/styles/styles.css`: original plain CSS, with asset paths adapted for Vite.
-- `public/assets/images/`: hero, room/food/cafe collages, logo and news placeholder.
-- `public/assets/fonts/`: Be Vietnam Pro fonts and SIL Open Font License.
+## Đóng gói
 
-## Features
-
-- Room view/capacity filters, indicative prices, details and all-room view.
-- Expected arrival/departure dates used solely as consultation context.
-- Shared native dialog with Escape, focus containment and focus restoration.
-- Room consultation preserves the selected room and expected stay context.
-- Restaurant menu, cafe detail views and demo offers.
-- Data-driven hero slider: six-second autoplay, previous/next, dots, pause, keyboard and swipe. Pauses on hover/focus and hidden tabs; reduced motion disables autoplay/transitions.
-- Mobile navigation, news categories and server pagination at six articles per page.
-
-## Cập nhật nội dung chính thức
-
-Thay các giá trị `PLACEHOLDER_*` trong `/admin/settings` bằng Hotline, URL Zalo/Facebook và địa chỉ/bản đồ đã được xác nhận. Kênh chưa có thông tin được đánh dấu chưa cập nhật và không điều hướng. Hotline dùng `tel:`, liên kết ngoài dùng `target="_blank"` và `rel="noopener noreferrer"`.
-
-Thay thông tin phòng, mô tả/giá/ảnh/sức chứa, các bài viết mẫu và chiến dịch trong các trang admin tương ứng. Tạo chiến dịch mới ở `/admin/hero`; không thêm object vào React source. Ảnh dùng URL HTTP(S) hoặc đường dẫn `assets/images/...` đã được phục vụ. Chưa có upload ảnh trong giai đoạn này.
-
-## Public API integration
-
-Nguồn dữ liệu chính duy nhất khi website chạy là CMS. Các endpoint:
-
-- `GET /api/rooms`, `GET /api/rooms/:slug` cho danh sách, bộ lọc và modal chi tiết phòng.
-- `GET /api/hero-slides` cho slider theo đúng thứ tự backend.
-- `GET /api/news?category=90s|tam-dao&page=…&limit=6`, `GET /api/news/:slug` cho pagination và modal nội dung đầy đủ.
-- `GET /api/content/restaurant|cafe|promotion|experience` cho các section đã định nghĩa.
-- `GET /api/site-config` cho liên hệ, địa chỉ/bản đồ, `document.title` và meta description.
-
-Public client chỉ gửi GET, không đọc sessionStorage, không đính kèm JWT/cookie và dùng `cache: no-store`. API URL được chia sẻ với admin qua `VITE_API_URL`; CORS của backend vẫn kiểm soát bằng `FRONTEND_URL`.
-
-Adapters ánh xạ `maxGuests` → `guests`, `viewType` → `view`, `imageUrl` → `image`; giữ `count`, `q` và `dishes`. `count` là mô tả tổng số phòng, không phải phòng trống. Ảnh collage hiện tại dùng q 0–3; ảnh thông thường hiển thị toàn khung với cover. Restaurant/café dùng card đầu tiên theo sortOrder làm card nổi bật và hiển thị các card còn lại theo thứ tự trong layout sẵn có. Các chương trình ưu đãi xuất hiện trong modal hiện tại; các thẻ experience dùng khối giới thiệu hiện tại.
-
-Không có fallback dữ liệu CMS ở runtime. API thành công với `[]` hoặc cấu hình trống được tôn trọng; fixture demo không tự xuất hiện lại. Khi request lỗi/timeout hoặc response không hợp lệ, section hiển thị thông báo tiếng Việt và nút thử lại, các section khác tiếp tục hoạt động. Request cũ được abort khi đổi chuyên mục/trang hoặc rời website. Pagination dùng `data` và `pagination` của backend, không lọc/cắt mảng tin tức cục bộ. Nội dung bài viết là văn bản thuần, không dùng HTML injection. Liên kết và URL ảnh chỉ dùng các scheme an toàn.
-
-The uploaded ZIP had no image files and zero-byte fonts. Complete image/font assets were restored from the earlier supplied prototype; no empty assets are included. Collage quadrants preserve the original presentation. Fonts are self-hosted and licensed under `public/assets/fonts/OFL.txt`.
-
-## Backend
-
-The Express/PostgreSQL/Prisma CMS backend lives in `server/`; see [server/README.md](server/README.md) for database setup, migrations, seeding and API documentation. There is no booking engine, room availability or payment. Both the public website and admin UI use the CMS APIs. Room/date actions remain consultation only and do not submit booking information.
-
-## Repository
-
-The React application lives at the repository root. Source, configuration, npm lockfile, assets and README are committed. `node_modules/` and generated `dist/` are ignored; run the commands above to reproduce them.
+Chạy `python3 scripts/package-source.py` để tạo ZIP trong thư mục được chỉ định. Script lấy mã nguồn và tài sản cần thiết, loại Git, node_modules, dist, test-results, uploads và mọi `.env` bí mật; chỉ giữ `.env.example`. ZIP không bao gồm database hay ảnh do người dùng upload: backup/chuyển các dữ liệu vận hành đó riêng.

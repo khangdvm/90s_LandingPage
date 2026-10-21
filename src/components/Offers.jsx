@@ -1,3 +1,6 @@
+import { SectionHeading } from "./ManagedContent.jsx";
+import SafeImage from "./SafeImage.jsx";
+import { BusinessNotice } from "./ManagedContent.jsx";
 import PublicState from "./PublicState.jsx";
 import ContentAction from "./ContentAction.jsx";
 import { assetUrl } from "../data/data.js";
@@ -7,8 +10,11 @@ export default function Offers({ resource, onOffers }) {
     <section id="uu-dai" className="offers">
       <div className="container offers-inner">
         <div>
-          <p className="eyebrow">ƯU ĐÃI TẠI 90s</p>
-          <h2>Thêm trải nghiệm cho kỳ nghỉ.</h2>
+          <SectionHeading
+            id="uu-dai"
+            subtitle="ƯU ĐÃI TẠI 90s"
+            title="Thêm trải nghiệm cho kỳ nghỉ."
+          />
           {(resource.loading || resource.error || !cards.length) && (
             <PublicState
               resource={resource}
@@ -32,14 +38,11 @@ export default function Offers({ resource, onOffers }) {
 export function OffersDetail({ cards, onConsult }) {
   return (
     <>
-      <p>
-        Các nhóm chương trình dưới đây dùng để minh họa cách trình bày; điều
-        kiện và quyền lợi chưa được áp dụng chính thức.
-      </p>
+      <BusinessNotice />
       {cards.map((card) => (
         <div className="offer-card" key={card.id}>
           {assetUrl(card.image) && (
-            <img
+            <SafeImage
               className="modal-room-photo"
               src={assetUrl(card.image)}
               alt={card.title}

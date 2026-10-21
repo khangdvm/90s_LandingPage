@@ -1,3 +1,4 @@
+import SafeImage from "./SafeImage.jsx";
 import { assetUrl } from "../data/data.js";
 import PublicState from "./PublicState.jsx";
 import ContentAction from "./ContentAction.jsx";
@@ -44,7 +45,7 @@ export default function About({ resource, onConsult }) {
                 )}
               </div>
               {assetUrl(card.image) && (
-                <img
+                <SafeImage
                   className="about-watermark"
                   src={assetUrl(card.image)}
                   alt=""

@@ -1,3 +1,6 @@
+import { SectionHeading } from "./ManagedContent.jsx";
+import SafeImage from "./SafeImage.jsx";
+import { Link } from "react-router-dom";
 import { useCallback, useEffect, useRef, useState, Fragment } from "react";
 import {
   NEWS_PAGE_SIZE,
@@ -50,13 +53,13 @@ export default function News({ onArticle }) {
       aria-labelledby="news-title"
     >
       <div className="section-head">
-        <div>
-          <p className="eyebrow red">TIN TỨC</p>
-          <h2 id="news-title">Chuyện ở 90s & Tam Đảo.</h2>
-          <p className="section-description">
-            Câu chuyện từ 90s và những trải nghiệm ở Tam Đảo.
-          </p>
-        </div>
+        <SectionHeading
+          id="tin-tuc"
+          title="Chuyện ở 90s & Tam Đảo."
+          subtitle="TIN TỨC"
+          description="Câu chuyện từ 90s và những trải nghiệm ở Tam Đảo."
+          titleId="news-title"
+        />
       </div>
       <div
         id="news-tabs"
@@ -96,7 +99,7 @@ export default function News({ onArticle }) {
           displayed.map((item) => (
             <article key={item.id} className="news-card">
               {assetUrl(item.image) ? (
-                <img
+                <SafeImage
                   src={assetUrl(item.image)}
                   alt={item.title}
                   loading="lazy"
@@ -123,14 +126,14 @@ export default function News({ onArticle }) {
                     Đọc thêm
                   </a>
                 ) : (
-                  <button
+                  <Link
+                    to={"/tin-tuc/" + item.slug}
                     className="text-link"
                     data-news={item.id}
                     aria-label={`Đọc thêm: ${item.title}`}
-                    onClick={() => onArticle(item)}
                   >
                     Đọc thêm
-                  </button>
+                  </Link>
                 )}
               </div>
             </article>

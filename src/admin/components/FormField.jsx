@@ -1,5 +1,18 @@
+import {
+  ImageInput,
+  GalleryEditor,
+  MenuEditor,
+  DocumentEditor,
+} from "./ContentEditors.jsx";
 import ImagePreview from "./ImagePreview.jsx";
-export default function FormField({ field, value, onChange, error, disabled }) {
+export default function FormField({
+  field,
+  value,
+  onChange,
+  error,
+  disabled,
+  onCover,
+}) {
   const id = `cms-${field.key}`;
   const props = {
     id,
@@ -9,6 +22,13 @@ export default function FormField({ field, value, onChange, error, disabled }) {
     "aria-invalid": error ? true : undefined,
     "aria-describedby": field.hint || error ? `${id}-help` : undefined,
   };
+  if (field.key === "q") return null;
+  const special = {
+    gallery: GalleryEditor,
+    menu: MenuEditor,
+    document: DocumentEditor,
+  };
+  const Special = special[field.type];
   return (
     <div
       className={`cms-field ${["textarea", "lines"].includes(field.type) ? "cms-wide" : ""}`}
@@ -29,7 +49,14 @@ export default function FormField({ field, value, onChange, error, disabled }) {
             {field.label}
             {field.required && <span aria-hidden="true"> *</span>}
           </label>
-          {field.type === "select" ? (
+          {Special ? (
+            <Special
+              value={value}
+              onChange={onChange}
+              disabled={disabled}
+              onCover={onCover}
+            />
+          ) : field.type === "select" ? (
             <select
               {...props}
               value={value}
@@ -67,7 +94,9 @@ export default function FormField({ field, value, onChange, error, disabled }) {
         {field.hint && <p className="cms-help">{field.hint}</p>}
         {error && <p className="cms-field-error">{error}</p>}
       </div>
-      {field.key === "imageUrl" && <ImagePreview value={value} />}
+      {["imageUrl", "logoUrl"].includes(field.key) && (
+        <ImageInput value={value} onChange={onChange} disabled={disabled} />
+      )}
     </div>
   );
 }

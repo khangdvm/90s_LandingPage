@@ -1,27 +1,23 @@
+import { image, external, target } from "../../shared/content.js";
+import { API_URL } from "../api/config.js";
 export const viewNames = { valley: "View thung lũng", town: "View thị trấn" };
 export const NEWS_PAGE_SIZE = 6;
 export function assetUrl(path) {
-  if (typeof path !== "string" || !path) return "";
-  const external = externalUrl(path);
-  if (external) return external;
-  if (!/^\/?assets\/[a-zA-Z0-9_./-]+$/.test(path) || path.includes(".."))
-    return "";
+  if (!path || !image(path) || path.startsWith("PLACEHOLDER_")) return "";
+  if (external(path)) return path;
+  if (path.startsWith("/uploads/")) return API_URL + path;
   return `${import.meta.env?.BASE_URL || "/"}${path.replace(/^\//, "")}`;
 }
 export function externalUrl(value) {
-  try {
-    const url = new URL(value);
-    return ["http:", "https:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password
-      ? url.href
-      : "";
-  } catch {
-    return "";
-  }
+  return external(value) ? value : "";
 }
 export function contentTarget(value) {
-  return /^#[a-zA-Z0-9_-]+$/.test(value || "") ? value : externalUrl(value);
+  return value &&
+    value !== "#" &&
+    target(value) &&
+    !value.startsWith("PLACEHOLDER_")
+    ? value
+    : "";
 }
 export const money = (amount) =>
   new Intl.NumberFormat("vi-VN").format(amount) + "đ";

@@ -1,3 +1,5 @@
+import SafeImage from "./SafeImage.jsx";
+import { useContent, BusinessNotice, SectionIntro } from "./ManagedContent.jsx";
 import { assetUrl, externalUrl } from "../data/data.js";
 import { ContactLinks } from "./ConsultationModal.jsx";
 
@@ -5,22 +7,24 @@ import { useSiteConfig } from "../data/SiteConfigContext.jsx";
 import PublicState from "./PublicState.jsx";
 export default function Footer({ onConsult, onInfo }) {
   const resource = useSiteConfig();
-  const CONTACT_INFO = resource.data || {};
+  const CONTACT_INFO = useContent();
+  if (CONTACT_INFO["lien-heEnabled"] === "false") return null;
   const map = externalUrl(CONTACT_INFO.mapUrl);
   return (
     <>
       <footer id="lien-he">
+        <SectionIntro id="lien-he" />
         <div className="container">
           <div className="footer-grid">
             <div className="footer-brand">
-              <img
-                src={assetUrl("assets/images/misc/logo.png")}
-                alt="90s Homestay"
+              <SafeImage
+                src={assetUrl(CONTACT_INFO.logoUrl)}
+                alt={CONTACT_INFO.brandName}
                 width="104"
                 height="98"
               />
-              <strong>90s Homestay · Tam Đảo</strong>
-              <p>Lưu trú · Nhà hàng · Cà phê</p>
+              <strong>{CONTACT_INFO.brandName}</strong>
+              <p>{CONTACT_INFO.footerText}</p>
               <p id="contact-location">
                 Địa điểm: {CONTACT_INFO.address || "Chưa cập nhật"}
               </p>
@@ -52,15 +56,32 @@ export default function Footer({ onConsult, onInfo }) {
             </div>
             <div>
               <p className="eyebrow red">KHÁM PHÁ</p>
-              <a href="#ve-90s">Về 90s</a>
-              <a href="#uu-dai">Ưu đãi</a>
-              <a href="#nha-hang">Nhà hàng & cà phê</a>
+              <a
+                hidden={CONTACT_INFO["ve-90sEnabled"] === "false"}
+                href="#ve-90s"
+              >
+                Về 90s
+              </a>
+              <a
+                hidden={CONTACT_INFO["uu-daiEnabled"] === "false"}
+                href="#uu-dai"
+              >
+                Ưu đãi
+              </a>
+              <a
+                hidden={CONTACT_INFO["nha-hangEnabled"] === "false"}
+                href="#nha-hang"
+              >
+                Nhà hàng & cà phê
+              </a>
             </div>
           </div>
           <div className="footer-bottom">
-            <span>© 2026 90s Homestay · Bản demo</span>
+            <span>
+              © {new Date().getFullYear()} {CONTACT_INFO.brandName}
+            </span>
             <button id="demo-info" onClick={onInfo}>
-              Thông tin về bản demo
+              Thông tin nội dung
             </button>
           </div>
         </div>
@@ -80,30 +101,5 @@ export default function Footer({ onConsult, onInfo }) {
   );
 }
 export function DemoInfo() {
-  return (
-    <>
-      <p>
-        Đây là bản thiết kế website 90s Homestay để xem bố cục và thử thao tác.
-        Hình ảnh phòng, món ăn, cà phê và các số liệu là minh họa.
-      </p>
-      <p>
-        Giá, số lượng phòng, sức chứa và chương trình ưu đãi cần được cập nhật
-        từ thông tin thực tế của 90s. Giao diện tư vấn chỉ mở kênh liên hệ;
-        không gửi thông tin tự động.
-      </p>
-      <p>
-        Ảnh bìa đã được AI điều chỉnh ánh sáng từ ảnh cảnh quan tham khảo trong
-        bài viết về 90s trên{" "}
-        <a
-          className="text-link"
-          href="https://tripday.vn/review/90s-homestay-tam-dao/"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Tripday
-        </a>
-        . Các ảnh dịch vụ còn lại là hình ảnh ý tưởng.
-      </p>
-    </>
-  );
+  return <BusinessNotice />;
 }

@@ -16,8 +16,12 @@ export default function DashboardPage() {
     const controller = new AbortController();
     setError("");
     setCounts(null);
-    Promise.all(cards.map(([api]) => adminApi.list(api, controller.signal)))
-      .then((data) => setCounts(data.map((x) => x.length)))
+    Promise.all(
+      cards.map(([api]) =>
+        adminApi.list(api, controller.signal, { page: 1, limit: 1 }),
+      ),
+    )
+      .then((data) => setCounts(data.map((x) => x.pagination.total)))
       .catch((error) => {
         if (error.name !== "AbortError") setError(error);
       });

@@ -1,3 +1,4 @@
+import { useContent } from "./ManagedContent.jsx";
 import { contentTarget, externalUrl } from "../data/data.js";
 export default function ContentAction({
   card,
@@ -7,7 +8,13 @@ export default function ContentAction({
   children,
   ...props
 }) {
+  const content = useContent();
   const target = contentTarget(card.ctaTarget);
+  if (
+    target.startsWith("#") &&
+    content[target.slice(1) + "Enabled"] === "false"
+  )
+    return null;
   if (target && target !== defaultTarget && target !== "#lien-he")
     return (
       <a

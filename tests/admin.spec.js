@@ -147,7 +147,9 @@ test("rooms: validation, duplicate slug, CRUD, image and state", async ({
       await page
         .getByLabel("Tổng số phòng hiển thị", { exact: true })
         .fill("3");
-      await page.getByLabel("Ô ảnh collage (0–3)", { exact: true }).fill("1");
+      await expect(
+        page.getByLabel("Ô ảnh collage (0–3)", { exact: true }),
+      ).toHaveCount(0);
     });
     id = item.id;
     await rowFor(page, "E2E Phòng");
@@ -272,7 +274,7 @@ test("news: category, CRUD, publish/unpublish, date and plaintext", async ({
         .getByLabel("Nội dung bài viết", { exact: true })
         .fill("Nội dung văn bản thuần, không HTML.");
       await page
-        .getByLabel("Ngày và giờ đăng", { exact: false })
+        .getByLabel("Ngày hiển thị trên bài", { exact: false })
         .fill("2026-10-13T10:30");
     });
     id = item.id;
@@ -332,13 +334,22 @@ test("content: section filter, dishes, CRUD and active state", async ({
       .click();
     const item = await create(page, "content", async () => {
       await page.getByLabel(/^Tiêu đề(?: \*)?$/).fill("E2E Card");
+      await page.getByRole("button", { name: "Thêm món", exact: true }).click();
+      await page.getByLabel("Tên món", { exact: true }).fill("Món thử 1");
+      await page.getByRole("button", { name: "Thêm món", exact: true }).click();
       await page
-        .getByLabel("Danh sách món", { exact: true })
-        .fill("Món thử 1\nMón thử 2");
-      await page.getByLabel("Ô ảnh collage (0–3)", { exact: true }).fill("2");
+        .getByLabel("Tên món", { exact: true })
+        .nth(1)
+        .fill("Món thử 2");
+      await expect(
+        page.getByLabel("Ô ảnh collage (0–3)", { exact: true }),
+      ).toHaveCount(0);
     });
     id = item.id;
-    expect(item.dishes).toEqual(["Món thử 1", "Món thử 2"]);
+    expect(item.menuItems.map((x) => x.name)).toEqual([
+      "Món thử 1",
+      "Món thử 2",
+    ]);
     await rowFor(page, "E2E Card");
     await page
       .getByRole("button", { name: "Sửa E2E Card", exact: true })
@@ -390,7 +401,7 @@ test("settings: load, validate contact URLs, update and restore", async ({
       .click();
     await expect(
       page.getByText(
-        "Chỉ dùng URL http/https, đường dẫn assets/…, liên kết # hoặc placeholder hiện tại.",
+        "Liên kết sai mục đích: ảnh dùng assets/, /uploads/ hoặc HTTP/HTTPS; liên hệ dùng HTTP/HTTPS; CTA dùng section hoặc trang chi tiết.",
         { exact: true },
       ),
     ).toBeVisible();
@@ -515,7 +526,10 @@ test("public frontend reads CMS, remains usable and visually separate", async ({
   await page
     .getByRole("button", { name: "Xem Phòng đôi view núi", exact: true })
     .click();
-  await expect(page.getByRole("dialog")).toBeVisible();
+  await expect(page).toHaveURL(/\/phong\/double$/);
+  await expect(
+    page.getByRole("heading", { name: "Phòng đôi view núi", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Nhận tư vấn", exact: true }).click();
   await expect(
     page.getByText("Giao diện này không gửi yêu cầu tự động.", {

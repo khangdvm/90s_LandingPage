@@ -17,6 +17,7 @@ model Admin {
 }
 
 model Room {
+  gallery Json @default("[]")
   id          String   @id @default(cuid())
   name        String
   slug        String   @unique
@@ -54,6 +55,7 @@ model HeroSlide {
 }
 
 model News {
+  contentDoc Json @default("[]")
   id          String   @id @default(cuid())
   slug        String   @unique
   category    String
@@ -71,6 +73,7 @@ model News {
 }
 
 model ContentCard {
+  menuItems Json @default("[]")
   id          String   @id @default(cuid())
   section     String
   title       String

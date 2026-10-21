@@ -1,3 +1,5 @@
+import { useContent } from "./ManagedContent.jsx";
+import SafeImage from "./SafeImage.jsx";
 import { useEffect, useRef, useState } from "react";
 import { assetUrl, contentTarget, externalUrl } from "../data/data.js";
 
@@ -18,6 +20,7 @@ export function useReducedMotion() {
 import PublicState from "./PublicState.jsx";
 
 export default function HeroSlider({ resource, onConsult, reducedMotion }) {
+  const content = useContent();
   const slides = resource.data || [];
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -120,9 +123,9 @@ export default function HeroSlider({ resource, onConsult, reducedMotion }) {
             aria-label={`${index + 1} / ${count}`}
           >
             {assetUrl(slide.image) && (
-              <img
+              <SafeImage
                 src={assetUrl(slide.image)}
-                alt="Khung cảnh Tam Đảo — ảnh minh họa từ demo"
+                alt={slide.eyebrow || slide.title}
                 fetchPriority={index === 0 ? "high" : "auto"}
                 loading={index === 0 ? "eager" : "lazy"}
               />
@@ -134,26 +137,30 @@ export default function HeroSlider({ resource, onConsult, reducedMotion }) {
               )}
               <h2 className="hero-title">{slide.title}</h2>
               <p className="hero-sub">{slide.description}</p>
-              {slide.ctaText && (
-                <a
-                  className="button ghost"
-                  href={contentTarget(slide.ctaTarget) || "#lien-he"}
-                  target={externalUrl(slide.ctaTarget) ? "_blank" : undefined}
-                  rel={
-                    externalUrl(slide.ctaTarget)
-                      ? "noopener noreferrer"
-                      : undefined
-                  }
-                  onClick={(event) => {
-                    if ((slide.ctaTarget || "#lien-he") === "#lien-he") {
-                      event.preventDefault();
-                      onConsult();
+              {slide.ctaText &&
+                !(
+                  slide.ctaTarget.startsWith("#") &&
+                  content[slide.ctaTarget.slice(1) + "Enabled"] === "false"
+                ) && (
+                  <a
+                    className="button ghost"
+                    href={contentTarget(slide.ctaTarget) || "#lien-he"}
+                    target={externalUrl(slide.ctaTarget) ? "_blank" : undefined}
+                    rel={
+                      externalUrl(slide.ctaTarget)
+                        ? "noopener noreferrer"
+                        : undefined
                     }
-                  }}
-                >
-                  {slide.ctaText}
-                </a>
-              )}
+                    onClick={(event) => {
+                      if ((slide.ctaTarget || "#lien-he") === "#lien-he") {
+                        event.preventDefault();
+                        onConsult();
+                      }
+                    }}
+                  >
+                    {slide.ctaText}
+                  </a>
+                )}
             </div>
           </article>
         ))}

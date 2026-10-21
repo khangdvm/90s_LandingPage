@@ -1,3 +1,5 @@
+import { assetUrl } from "../../data/data.js";
+import { useDraft } from "../hooks/useDraft.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { adminApi } from "../api/adminApi.js";
@@ -51,16 +53,29 @@ function displayValue(key, value) {
 }
 function Editor({ config, item, defaults, busy, onSave, onCancel }) {
   const [draft, setDraft] = useState(() => draftFor(config, item || defaults));
+  const initial = useRef(draftFor(config, item || defaults));
+  const protection = useDraft(
+    config.api + "." + (item?.id || "new"),
+    draft,
+    initial.current,
+    setDraft,
+    item?.updatedAt || "",
+  );
   const [errors, setErrors] = useState({}),
     [notice, setNotice] = useState("");
   const heading = useRef(null),
     form = useRef(null);
+  const customSlug = useRef(Boolean(item));
   useEffect(() => {
     heading.current?.focus();
   }, []);
   function submit(event) {
     event.preventDefault();
     setNotice("");
+    if (form.current?.querySelector('[data-upload-busy="true"]')) {
+      setNotice("Chờ upload ảnh hoàn tất trước khi lưu.");
+      return;
+    }
     const errors = validateDraft(config.fields, draft);
     setErrors(errors);
     if (Object.keys(errors).length) {
@@ -74,7 +89,10 @@ function Editor({ config, item, defaults, busy, onSave, onCancel }) {
       setNotice("Chưa có thay đổi cần lưu.");
       return;
     }
-    onSave(body);
+    onSave(
+      { ...body, ...(item ? { _version: item.updatedAt } : {}) },
+      protection.clear,
+    );
   }
   return (
     <section className="cms-panel">
@@ -83,6 +101,12 @@ function Editor({ config, item, defaults, busy, onSave, onCancel }) {
       </h2>
       <p className="cms-help">Các trường có dấu * là bắt buộc.</p>
       <Feedback success={notice} />
+      {protection.recovery}
+      {protection.dirty && (
+        <p role="status">
+          Có thay đổi chưa lưu. Bản nháp được lưu trên trình duyệt này.
+        </p>
+      )}
       <form ref={form} onSubmit={submit} noValidate>
         <div className="cms-form-grid">
           {config.fields.map((field) => (
@@ -90,10 +114,22 @@ function Editor({ config, item, defaults, busy, onSave, onCancel }) {
               key={field.key}
               field={field}
               value={draft[field.key]}
+              onCover={(url) =>
+                setDraft((current) => ({ ...current, imageUrl: url }))
+              }
               disabled={busy}
               error={errors[field.key]}
               onChange={(value) => {
-                setDraft((current) => ({ ...current, [field.key]: value }));
+                if (field.key === "slug") customSlug.current = true;
+                setDraft((current) => ({
+                  ...current,
+                  [field.key]: value,
+                  ...(["name", "title"].includes(field.key) &&
+                  !customSlug.current &&
+                  config.fields.some((f) => f.slug)
+                    ? { slug: slugFrom(value) }
+                    : {}),
+                }));
                 setErrors((current) => ({ ...current, [field.key]: "" }));
               }}
             />
@@ -122,7 +158,9 @@ function Editor({ config, item, defaults, busy, onSave, onCancel }) {
           <button
             type="button"
             className="cms-button cms-secondary"
-            onClick={onCancel}
+            onClick={() => {
+              if (protection.discard()) onCancel();
+            }}
             disabled={busy}
           >
             Hủy chỉnh sửa
@@ -141,10 +179,26 @@ export default function ResourcePage({ resource }) {
     [success, setSuccess] = useState(""),
     [reload, setReload] = useState(0),
     [filter, setFilter] = useState("");
+  const [page, setPage] = useState(1),
+    [total, setTotal] = useState(0),
+    [query, setQuery] = useState(""),
+    [status, setStatus] = useState("");
   const [editor, setEditor] = useState(null),
     [busy, setBusy] = useState(false),
     [confirm, setConfirm] = useState(null),
     [deleteError, setDeleteError] = useState("");
+  const editRequested = search.get("edit");
+  useEffect(() => {
+    if (!editRequested) return;
+    const controller = new AbortController();
+    adminApi
+      .get(config.api, editRequested, controller.signal)
+      .then((item) => setEditor({ item }))
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(e);
+      });
+    return () => controller.abort();
+  }, [editRequested, config.api]);
   const createRequested = search.get("new") === "1";
   const editing = editor !== null || createRequested;
   useEffect(() => {
@@ -152,8 +206,19 @@ export default function ResourcePage({ resource }) {
     setLoading(true);
     setError("");
     adminApi
-      .list(config.api, controller.signal)
-      .then(setRows)
+      .list(config.api, controller.signal, {
+        page,
+        limit: 10,
+        ...(query ? { search: query } : {}),
+        ...(status ? { status } : {}),
+        ...(filter && config.filter ? { [config.filter.key]: filter } : {}),
+      })
+      .then((result) => {
+        setRows(result.data);
+        setTotal(result.pagination.total);
+        if (page > Math.max(1, result.pagination.totalPages))
+          setPage(Math.max(1, result.pagination.totalPages));
+      })
       .catch((error) => {
         if (error.name !== "AbortError") setError(error);
       })
@@ -161,22 +226,21 @@ export default function ResourcePage({ resource }) {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [config.api, reload]);
-  const visible = rows.filter(
-    (row) => !filter || row[config.filter?.key] === filter,
-  );
+  }, [config.api, reload, page, query, status, filter]);
+  const visible = rows;
   const flag = resource === "news" ? "isPublished" : "isActive";
   function closeEditor() {
     setEditor(null);
-    if (createRequested) setSearch({}, { replace: true });
+    setSearch({}, { replace: true });
   }
-  async function save(body) {
+  async function save(body, clearDraft) {
     setBusy(true);
     setError("");
     setSuccess("");
     try {
       if (editor?.item) await adminApi.update(config.api, editor.item.id, body);
       else await adminApi.create(config.api, body);
+      clearDraft?.();
       closeEditor();
       setSuccess("Lưu thay đổi thành công.");
       setReload((value) => value + 1);
@@ -233,6 +297,7 @@ export default function ResourcePage({ resource }) {
             onClick={() => {
               setError("");
               setSuccess("");
+              setSearch({ new: "1" });
               setEditor({ item: null });
             }}
           >
@@ -257,13 +322,43 @@ export default function ResourcePage({ resource }) {
       ) : (
         <>
           <div className="cms-toolbar">
+            <label>
+              Tìm kiếm
+              <input
+                aria-label="Tìm kiếm"
+                value={query}
+                maxLength={200}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setPage(1);
+                }}
+              />
+            </label>
+            <label>
+              Trạng thái
+              <select
+                aria-label="Lọc trạng thái"
+                value={status}
+                onChange={(e) => {
+                  setStatus(e.target.value);
+                  setPage(1);
+                }}
+              >
+                <option value="">Tất cả</option>
+                <option value="true">Đang hiển thị</option>
+                <option value="false">Đang ẩn / nháp</option>
+              </select>
+            </label>
             {config.filter && (
               <div className="cms-field">
                 <label htmlFor="cms-filter">{config.filter.label}</label>
                 <select
                   id="cms-filter"
                   value={filter}
-                  onChange={(event) => setFilter(event.target.value)}
+                  onChange={(event) => {
+                    setFilter(event.target.value);
+                    setPage(1);
+                  }}
                 >
                   <option value="">Tất cả</option>
                   {config.filter.options.map(([value, label]) => (
@@ -274,9 +369,7 @@ export default function ResourcePage({ resource }) {
                 </select>
               </div>
             )}
-            <p>
-              {loading ? "Đang tải…" : `${visible.length} ${config.singular}`}
-            </p>
+            <p>{loading ? "Đang tải…" : `${total} ${config.singular}`}</p>
             <button
               className="cms-button cms-secondary"
               disabled={busy || loading}
@@ -285,6 +378,24 @@ export default function ResourcePage({ resource }) {
               Tải lại
             </button>
           </div>
+          <nav aria-label="Phân trang quản trị">
+            <button
+              disabled={loading || page === 1}
+              onClick={() => setPage(page - 1)}
+            >
+              Trang trước
+            </button>
+            <span>
+              {" "}
+              Trang {page} / {Math.max(1, Math.ceil(total / 10))}{" "}
+            </span>
+            <button
+              disabled={loading || page * 10 >= total}
+              onClick={() => setPage(page + 1)}
+            >
+              Trang sau
+            </button>
+          </nav>
           {loading ? (
             <LoadingState />
           ) : visible.length ? (
@@ -310,6 +421,17 @@ export default function ResourcePage({ resource }) {
                   {visible.map((row) => (
                     <tr key={row.id}>
                       <td data-label="Tên / Tiêu đề">
+                        {assetUrl(row.imageUrl) && (
+                          <img
+                            className="cms-thumbnail"
+                            src={assetUrl(row.imageUrl)}
+                            alt=""
+                            loading="lazy"
+                            onError={(e) => {
+                              e.currentTarget.hidden = true;
+                            }}
+                          />
+                        )}
                         <strong>{row.name || row.title}</strong>
                         {row.slug && <small>{row.slug}</small>}
                       </td>
@@ -342,6 +464,7 @@ export default function ResourcePage({ resource }) {
                             disabled={busy}
                             aria-label={`Sửa ${row.name || row.title}`}
                             onClick={() => {
+                              setSearch({ edit: row.id });
                               setEditor({ item: row });
                               setError("");
                               setSuccess("");

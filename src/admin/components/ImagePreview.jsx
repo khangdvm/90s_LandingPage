@@ -1,21 +1,7 @@
+import { assetUrl } from "../../data/data.js";
 import { useState } from "react";
 export function previewUrl(value) {
-  if (!value || value.startsWith("PLACEHOLDER_")) return null;
-  if (/^\/?assets\/[a-zA-Z0-9_./-]+$/.test(value) && !value.includes("..")) {
-    const base =
-      import.meta.env.BASE_URL === "./" ? "/" : import.meta.env.BASE_URL;
-    return `${base}${value.replace(/^\//, "")}`;
-  }
-  try {
-    const url = new URL(value);
-    return ["http:", "https:"].includes(url.protocol) &&
-      !url.username &&
-      !url.password
-      ? url.href
-      : null;
-  } catch {
-    return null;
-  }
+  return assetUrl(value) || null;
 }
 function Preview({ url }) {
   const [broken, setBroken] = useState(false);

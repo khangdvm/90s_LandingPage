@@ -1,3 +1,6 @@
+import { useNavigate } from "react-router-dom";
+import { BusinessNotice, SectionIntro } from "./components/ManagedContent.jsx";
+import { settingDefaults } from "../shared/content.js";
 import { useEffect, useRef, useState } from "react";
 import Header from "./components/Header.jsx";
 import HeroSlider, { useReducedMotion } from "./components/HeroSlider.jsx";
@@ -17,20 +20,39 @@ import { SiteConfigContext } from "./data/SiteConfigContext.jsx";
 import { RoomDetail, ArticleDetail } from "./components/PublicDetails.jsx";
 
 export default function App() {
+  const navigate = useNavigate();
   const roomResource = usePublicResource(publicApi.rooms);
   const heroResource = usePublicResource(publicApi.heroSlides);
   const restaurantResource = usePublicResource(publicApi.restaurant);
   const cafeResource = usePublicResource(publicApi.cafe);
   const promotionResource = usePublicResource(publicApi.promotion);
   const experienceResource = usePublicResource(publicApi.experience);
-  const siteConfig = usePublicResource(publicApi.siteConfig);
+  const newsSummaryLoader = useRef((signal) =>
+    publicApi.news({ category: "", page: 1, limit: 1 }, signal),
+  );
+  const newsSummary = usePublicResource(newsSummaryLoader.current);
+  const rawConfig = usePublicResource(publicApi.siteConfig);
+  const effective = { ...settingDefaults, ...rawConfig.data };
+  const availability = {
+    "ve-90s": experienceResource,
+    "phong-nghi": roomResource,
+    "nha-hang": restaurantResource,
+    "ca-phe": cafeResource,
+    "uu-dai": promotionResource,
+  };
+  for (const [id, r] of Object.entries(availability))
+    if (r.data && !r.data.length) effective[id + "Enabled"] = "false";
+  if (newsSummary.data?.pagination.total === 0)
+    effective["tin-tucEnabled"] = "false";
+  const siteConfig = { ...rawConfig, data: effective };
+  const enabled = (id) => effective[id + "Enabled"] !== "false";
   useEffect(() => {
     if (!siteConfig.data) return;
     document.title = siteConfig.data.siteTitle || "90s Homestay";
     document
       .querySelector('meta[name="description"]')
       ?.setAttribute("content", siteConfig.data.siteDescription || "");
-  }, [siteConfig.data]);
+  }, [rawConfig.data]);
   const [filters, setFilters] = useState(() => ({
     view: "all",
     guests: 0,
@@ -43,7 +65,10 @@ export default function App() {
   const reducedMotion = useReducedMotion();
   const onConsult = (room = null, type = "room") =>
     setModal({ kind: "consult", title: "Nhận tư vấn", room, type });
-  const onRoom = (room) => setModal({ kind: "room", title: room.name, room });
+  const onRoom = (room) => {
+    setModal(null);
+    navigate("/phong/" + room.slug);
+  };
   const onAllRooms = () =>
     setModal({ kind: "all-rooms", title: "Các hạng phòng tại 90s" });
   const onMenu = (card) =>
@@ -141,40 +166,72 @@ export default function App() {
           <h1 className="sr-only">
             {siteConfig.data?.siteTitle || "90s Homestay"}
           </h1>
-          <HeroSlider
-            resource={heroResource}
-            onConsult={onConsult}
-            reducedMotion={reducedMotion}
-          />
-          <About resource={experienceResource} onConsult={onConsult} />
-          <Rooms
-            resource={roomResource}
-            filters={filters}
-            onView={(view) => setFilters((value) => ({ ...value, view }))}
-            onRoom={onRoom}
-            onAllRooms={onAllRooms}
-            onStay={() =>
-              setModal({ kind: "stay", title: "Ngày dự kiến lưu trú" })
-            }
-            onConsult={onConsult}
-          />
-          <Restaurant
-            resource={restaurantResource}
-            onMenu={onMenu}
-            onConsult={onConsult}
-          />
-          <Cafe resource={cafeResource} onCafe={onCafe} onConsult={onConsult} />
-          <Offers
-            resource={promotionResource}
-            onOffers={() =>
-              setModal({ kind: "offers", title: "Gợi ý ưu đãi tại 90s" })
-            }
-          />
-          <News
-            onArticle={(article) =>
-              setModal({ kind: "article", title: article.title, article })
-            }
-          />
+          <BusinessNotice />
+          {(heroResource.loading ||
+            heroResource.error ||
+            !!heroResource.data?.length) && (
+            <HeroSlider
+              resource={heroResource}
+              onConsult={onConsult}
+              reducedMotion={reducedMotion}
+            />
+          )}
+          {enabled("ve-90s") && (
+            <>
+              <SectionIntro id="ve-90s" />
+              <About resource={experienceResource} onConsult={onConsult} />
+            </>
+          )}
+          {enabled("phong-nghi") && (
+            <>
+              <Rooms
+                resource={roomResource}
+                filters={filters}
+                onView={(view) => setFilters((value) => ({ ...value, view }))}
+                onRoom={onRoom}
+                onAllRooms={onAllRooms}
+                onStay={() =>
+                  setModal({ kind: "stay", title: "Ngày dự kiến lưu trú" })
+                }
+                onConsult={onConsult}
+              />
+            </>
+          )}
+          {enabled("nha-hang") && (
+            <>
+              <Restaurant
+                resource={restaurantResource}
+                onMenu={onMenu}
+                onConsult={onConsult}
+              />
+            </>
+          )}
+          {enabled("ca-phe") && (
+            <>
+              <Cafe
+                resource={cafeResource}
+                onCafe={onCafe}
+                onConsult={onConsult}
+              />
+            </>
+          )}
+          {enabled("uu-dai") && (
+            <>
+              <Offers
+                resource={promotionResource}
+                onOffers={() =>
+                  setModal({ kind: "offers", title: "Gợi ý ưu đãi tại 90s" })
+                }
+              />
+            </>
+          )}
+          {enabled("tin-tuc") && (
+            <>
+              <News
+                onArticle={(article) => navigate("/tin-tuc/" + article.slug)}
+              />
+            </>
+          )}
         </main>
         <Footer
           onConsult={onConsult}
