@@ -114,7 +114,18 @@ export function useDraft(
       <button
         type="button"
         onClick={() => {
-          setValue(saved.value);
+          // Older drafts may predate newly added fields. Keep current defaults
+          // for those fields and ignore keys the current editor no longer uses.
+          setValue(
+            Object.fromEntries(
+              Object.keys(initial || {}).map((field) => [
+                field,
+                Object.hasOwn(saved.value || {}, field)
+                  ? saved.value[field]
+                  : initial[field],
+              ]),
+            ),
+          );
           setSaved(null);
         }}
       >

@@ -1,6 +1,6 @@
-# Chủ website cần xác nhận trước khi công khai
+# Nội dung vận hành do CMS quản lý
 
-Mặc định `contentConfirmed=false`; giao diện ghi rõ nội dung mẫu/chưa xác nhận. Không đổi sang đã xác nhận chỉ để ẩn cảnh báo. Thực hiện rà soát toàn bộ website trước khi xác nhận, có thể tắt các section chưa sẵn sàng.
+Theo yêu cầu bàn giao demo, website không hiển thị nhãn mẫu/chờ xác nhận. Danh sách dưới đây mô tả các nội dung có thể thay bằng thông tin của đơn vị vận hành.
 
 - Quyền sử dụng logo, ảnh cảnh quan/ảnh AI, ảnh phòng, món ăn và cà phê. Thay ảnh ý tưởng bằng ảnh có quyền sử dụng, thể hiện dịch vụ thực tế.
 - Tên thương hiệu, địa chỉ, số hotline, URL Zalo/Facebook/map chính thức. Placeholder chưa phải thông tin liên hệ sử dụng được.
@@ -10,4 +10,4 @@ Mặc định `contentConfirmed=false`; giao diện ghi rõ nội dung mẫu/ch�
 - Chương trình ưu đãi: ngày áp dụng, quyền lợi, điều kiện, đối tượng, giá, kênh liên hệ. Ẩn chương trình chưa xác nhận.
 - Tin tức: quyền tác giả, nội dung, ảnh, nguồn, category, slug đã chia sẻ, ngày hiển thị và trạng thái đăng. Ngày này không tự hẹn giờ xuất bản.
 - Title/description, mô tả các section/footer và thông báo kinh doanh theo thời điểm.
-- Sau khi kiểm tra tất cả, vào Cài đặt chọn “Chủ website đã xác nhận toàn bộ”, sửa/xóa thông báo mẫu, rồi kiểm tra lại public. Các câu mẫu nằm trong bản ghi vẫn phải được sửa riêng, hệ thống không tự biến chúng thành nội dung thật.
+- 16 bài viết đã được soạn nội dung ban đầu; chỉnh sửa trực tiếp trong CMS. Trạng thái xác nhận cũ được giữ để tương thích API, không điều khiển nhãn công khai.

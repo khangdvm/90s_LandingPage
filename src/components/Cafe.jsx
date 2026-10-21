@@ -1,3 +1,5 @@
+import MediaGallery, { UpdatedAt } from "./MediaGallery.jsx";
+import { Link } from "react-router-dom";
 import { SectionHeading } from "./ManagedContent.jsx";
 import { BusinessNotice, useContent } from "./ManagedContent.jsx";
 import ContentPhoto from "./ContentPhoto.jsx";
@@ -67,12 +69,9 @@ export function CafeDetail({ card, cards, onCafe }) {
   const settings = useContent();
   return (
     <>
-      <ContentPhoto
-        item={card}
-        className="cafe-photo modal-room-photo"
-        label={`Ảnh ${card.title}`}
-        as="div"
-      />
+      <MediaGallery item={card} />
+      <UpdatedAt value={card.updatedAt} />
+      <Link className="text-link" to={"/noi-dung/" + card.id}>Xem trang chi tiết</Link>
       <p className="eyebrow red">{settings.cafeStatus}</p>
       <p className="public-text">{card.description}</p>
       <BusinessNotice />

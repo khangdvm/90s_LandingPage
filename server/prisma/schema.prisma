@@ -17,7 +17,9 @@ model Admin {
 }
 
 model Room {
-  gallery Json @default("[]")
+  subtitle    String   @default("")
+  media       Json     @default("[]")
+  gallery     Json     @default("[]")
   id          String   @id @default(cuid())
   name        String
   slug        String   @unique
@@ -38,6 +40,7 @@ model Room {
 }
 
 model HeroSlide {
+  media       Json     @default("[]")
   id          String   @id @default(cuid())
   eyebrow     String   @default("")
   title       String
@@ -55,7 +58,9 @@ model HeroSlide {
 }
 
 model News {
-  contentDoc Json @default("[]")
+  subtitle    String   @default("")
+  media       Json     @default("[]")
+  contentDoc  Json     @default("[]")
   id          String   @id @default(cuid())
   slug        String   @unique
   category    String
@@ -73,7 +78,8 @@ model News {
 }
 
 model ContentCard {
-  menuItems Json @default("[]")
+  media       Json     @default("[]")
+  menuItems   Json     @default("[]")
   id          String   @id @default(cuid())
   section     String
   title       String

@@ -54,7 +54,7 @@ try {
     { timeout: 30000 },
   );
   console.log(
-    "Seed complete: 1 admin requirement, 4 rooms, 3 slides, 16 sample news, 10 content cards, 7 settings (existing records preserved).",
+    "Seed complete: 1 admin requirement, 4 rooms, 3 slides, 16 news articles, 10 content cards, 7 settings (existing records preserved).",
   );
 } finally {
   await db.$disconnect();

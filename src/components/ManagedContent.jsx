@@ -1,20 +1,21 @@
 import { useSiteConfig } from "../data/SiteConfigContext.jsx";
 import { settingDefaults } from "../../shared/content.js";
 export function useContent() {
-  return { ...settingDefaults, ...useSiteConfig().data };
+  const content = { ...settingDefaults, ...useSiteConfig().data };
+  // Existing installations can still contain the former seed notice.
+  if (
+    /^Nội dung mẫu\s*\/?\s*chưa được (chủ website )?xác nhận\.?$/i.test(
+      content.businessNotice?.trim(),
+    )
+  )
+    content.businessNotice = "";
+  if (content.cafeStatus === "Thông tin khu cà phê đang chờ xác nhận")
+    content.cafeStatus = settingDefaults.cafeStatus;
+  return content;
 }
 export function BusinessNotice() {
-  const c = useContent();
-  return (
-    <>
-      {c.contentConfirmed !== "true" && (
-        <p className="form-notice" role="note">
-          Nội dung mẫu / chưa được chủ website xác nhận.
-        </p>
-      )}
-      {c.businessNotice && <p className="demo-note">{c.businessNotice}</p>}
-    </>
-  );
+  const { businessNotice } = useContent();
+  return businessNotice ? <p className="demo-note">{businessNotice}</p> : null;
 }
 export function SectionIntro({ id }) {
   const c = useContent();

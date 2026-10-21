@@ -1,11 +1,10 @@
 import { useContent, SectionHeading } from "./ManagedContent.jsx";
-import SafeImage from "./SafeImage.jsx";
+import { MediaPlayer, mediaItems } from "./MediaGallery.jsx";
 import { Link, useSearchParams } from "react-router-dom";
 import { useCallback, useEffect, useRef, Fragment } from "react";
 import {
   NEWS_PAGE_SIZE,
   displayDate,
-  assetUrl,
   contentTarget,
   externalUrl,
 } from "../data/data.js";
@@ -129,10 +128,11 @@ export default function News({ onArticle }) {
         ) : displayed.length ? (
           displayed.map((item) => (
             <article key={item.id} className="news-card">
-              {assetUrl(item.image) ? (
-                <SafeImage
-                  src={assetUrl(item.image)}
-                  alt={item.title}
+              {mediaItems(item)[0] ? (
+                <MediaPlayer
+                  key={mediaItems(item)[0].src}
+                  item={mediaItems(item)[0]}
+                  preview
                   loading="lazy"
                   width="600"
                   height="400"
@@ -145,6 +145,9 @@ export default function News({ onArticle }) {
                   Ngày đăng: {displayDate(item.publishedAt)}
                 </time>
                 <h3>{item.title}</h3>
+                {item.subtitle && (
+                  <p className="news-subtitle">{item.subtitle}</p>
+                )}
                 <p>{item.excerpt}</p>
                 {articleTarget(item.href) ? (
                   <a

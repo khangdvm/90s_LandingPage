@@ -1,4 +1,4 @@
-import { image, external, target } from "../../shared/content.js";
+import { image, external, target, video } from "../../shared/content.js";
 import { API_URL } from "../api/config.js";
 export const viewNames = { valley: "View thung lũng", town: "View thị trấn" };
 export const NEWS_PAGE_SIZE = 6;
@@ -37,3 +37,20 @@ export const displayDate = (value) =>
   new Date(
     /^\d{4}-\d{2}-\d{2}$/.test(value) ? value + "T12:00:00" : value,
   ).toLocaleDateString("vi-VN");
+
+export function mediaUrl(value) {
+  if (video(value)) {
+    if (external(value)) return value;
+    return value.startsWith("/uploads/")
+      ? API_URL + value
+      : `${import.meta.env?.BASE_URL || "/"}${value.replace(/^\//, "")}`;
+  }
+  return assetUrl(value);
+}
+export const displayDateTime = (value) =>
+  Number.isFinite(Date.parse(value))
+    ? new Date(value).toLocaleString("vi-VN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })
+    : "";

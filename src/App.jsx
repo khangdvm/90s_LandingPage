@@ -15,7 +15,7 @@ import Cafe, { CafeDetail } from "./components/Cafe.jsx";
 import Offers, { OffersDetail } from "./components/Offers.jsx";
 import News from "./components/News.jsx";
 import ConsultationModal, { Modal } from "./components/ConsultationModal.jsx";
-import Footer, { DemoInfo } from "./components/Footer.jsx";
+import Footer from "./components/Footer.jsx";
 import { today, nextDay } from "./data/data.js";
 
 import { publicApi } from "./api/publicApi.js";
@@ -150,9 +150,6 @@ export default function App() {
         <ArticleDetail key={modal.article.slug} slug={modal.article.slug} />
       );
       break;
-    case "info":
-      content = <DemoInfo />;
-      break;
   }
   return (
     <SiteConfigContext.Provider value={siteConfig}>
@@ -231,10 +228,7 @@ export default function App() {
             </>
           )}
         </main>
-        <Footer
-          onConsult={onConsult}
-          onInfo={() => setModal({ kind: "info", title: "Về bản demo" })}
-        />
+        <Footer onConsult={onConsult} />
         <Modal
           open={Boolean(modal)}
           title={modal?.title || ""}

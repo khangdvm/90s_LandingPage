@@ -1,5 +1,6 @@
 import {
   image,
+  validMedia,
   galleryImage,
   menuFromNames,
   contact,
@@ -37,12 +38,14 @@ const slug = (v) =>
   v.length <= 160;
 export const link = target;
 const common = {
+  media: validMedia,
   sortOrder: integer(0),
   isActive: (v) => typeof v === "boolean",
   imageUrl: image,
 };
 const schemas = {
   rooms: {
+    subtitle: text,
     gallery: (v) => Array.isArray(v) && v.length <= 30 && v.every(galleryImage),
     name: requiredText,
     slug,
@@ -65,6 +68,8 @@ const schemas = {
     ...common,
   },
   news: {
+    media: validMedia,
+    subtitle: text,
     slug,
     category: choice(["90s", "tam-dao"]),
     title: requiredText,
@@ -155,7 +160,8 @@ export function siteConfig(body) {
       fail(`Invalid config: ${key}`);
     if (["zaloUrl", "facebookUrl", "mapUrl"].includes(key) && !contact(value))
       fail(`Invalid URL: ${key}`);
-    if (key === "hotline" && !phone(value)) fail("Số điện thoại không hợp lệ");
+    if (["hotline", "zaloPhone"].includes(key) && !phone(value))
+      fail("Số điện thoại không hợp lệ");
     if (key === "logoUrl" && !image(value))
       fail("Đường dẫn ảnh logo không hợp lệ");
     if (

@@ -54,6 +54,9 @@ export function publicRoutes(db) {
       ),
     ),
   );
+  router.get("/content/item/:id", async (req, res) => res.json(found(
+    await db.contentCard.findFirst({ where: { id: req.params.id, isActive: true } }),
+  )));
   router.get("/content/:section", async (req, res) => {
     if (!sections.includes(req.params.section))
       throw new HttpError(400, "Invalid section");

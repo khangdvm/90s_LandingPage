@@ -1,3 +1,4 @@
+import { PrismaClient } from "../server/node_modules/@prisma/client/index.js";
 import { test, expect } from "@playwright/test";
 const email = process.env.E2E_ADMIN_EMAIL,
   password = process.env.E2E_ADMIN_PASSWORD;
@@ -245,8 +246,14 @@ test("hero: create promotion, edit, reorder, toggle, delete", async ({
       0,
     );
   } finally {
-    if (id)
-      await request.delete(`${api}/api/admin/hero-slides/${id}`, { headers });
+    if (id) {
+      const db = new PrismaClient();
+      try {
+        await db.heroSlide.deleteMany({ where: { id } });
+      } finally {
+        await db.$disconnect();
+      }
+    }
   }
 });
 test("news: category, CRUD, publish/unpublish, date and plaintext", async ({
@@ -532,9 +539,12 @@ test("public frontend reads CMS, remains usable and visually separate", async ({
   ).toBeVisible();
   await page.getByRole("button", { name: "Nhận tư vấn", exact: true }).click();
   await expect(
-    page.getByText("Giao diện này không gửi yêu cầu tự động.", {
-      exact: false,
-    }),
+    page.getByText(
+      "Chọn kênh liên hệ để trao đổi lịch trình và nhận tư vấn trực tiếp.",
+      {
+        exact: false,
+      },
+    ),
   ).toBeVisible();
   expect(requests.some((request) => request.url.endsWith("/api/rooms"))).toBe(
     true,

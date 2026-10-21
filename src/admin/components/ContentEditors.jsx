@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from "react";
 import { useUploads } from "../hooks/useUploads.js";
 import { adminApi } from "../api/adminApi.js";
 import { assetUrl } from "../../data/data.js";
+import { MediaPlayer } from "../../components/MediaGallery.jsx";
 import RichDocument from "../../components/RichDocument.jsx";
-export function ImageInput({ value, onChange, disabled }) {
+export function ImageInput({ value, onChange, disabled, video = false }) {
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [file, setFile] = useState(null);
@@ -30,7 +31,7 @@ export function ImageInput({ value, onChange, disabled }) {
     setBusy(true);
     setError("");
     try {
-      const r = await adminApi.upload(selected, controller.signal);
+      const r = await adminApi.upload(selected, controller.signal, video);
       if (!controller.signal.aborted) changeRef.current(r.url);
     } catch (e) {
       if (!controller.signal.aborted) setError(e.message);
@@ -45,16 +46,18 @@ export function ImageInput({ value, onChange, disabled }) {
   return (
     <div className="cms-image-input">
       <input
-        aria-label="Chọn ảnh từ máy"
+        aria-label={video ? "Chọn video từ máy" : "Chọn ảnh từ máy"}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={
+          video ? "video/mp4,video/webm" : "image/jpeg,image/png,image/webp"
+        }
         disabled={disabled || busy}
         onChange={(e) => {
           upload(e.target.files[0]);
           e.target.value = "";
         }}
       />
-      {busy && <p role="status">Đang tải ảnh… Chờ hoàn tất trước khi lưu.</p>}
+      {busy && <p role="status">Đang tải media… Chờ hoàn tất trước khi lưu.</p>}
       {error && (
         <p role="alert">
           {error}{" "}
@@ -72,10 +75,24 @@ export function ImageInput({ value, onChange, disabled }) {
         disabled={disabled || busy}
         onClick={() => onChange("")}
       >
-        Bỏ ảnh
+        {video ? "Bỏ video" : "Bỏ ảnh"}
       </button>
       <input type="hidden" data-upload-busy={busy ? "true" : "false"} />
-      <ImagePreview value={value} />
+      {video ? (
+        value && (
+          <MediaPlayer
+            key={value}
+            item={{
+              type: "video",
+              src: value,
+              alt: "Video xem trước nội dung",
+            }}
+            className="cms-image-preview"
+          />
+        )
+      ) : (
+        <ImagePreview value={value} />
+      )}
     </div>
   );
 }
@@ -264,8 +281,9 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
   return (
     <div className="cms-stack">
       <p>
-        Định dạng theo từng khối. Văn bản cũ vẫn được giữ; thêm khối mới sẽ dùng
-        nội dung mới khi hiển thị.
+        Định dạng theo từng khối; khối có định dạng được ưu tiên hiển thị. Khi
+        thêm khối đầu tiên, văn bản thuần hiện có được chuyển thành một đoạn để
+        giữ nội dung.
       </p>
       <button
         type="button"
@@ -292,6 +310,7 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
                 <option value="heading">Tiêu đề</option>
                 <option value="list">Danh sách (mỗi dòng một mục)</option>
                 <option value="image">Ảnh</option>
+                <option value="video">Video</option>
               </select>
             </label>
             <label>
@@ -303,15 +322,20 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
                 onChange={(e) => change(i, "text", e.target.value)}
               />
             </label>
-            {b.type === "image" ? (
+            {["image", "video"].includes(b.type) ? (
               <>
                 <input
-                  aria-label="URL ảnh trong bài"
+                  aria-label={
+                    b.type === "video"
+                      ? "URL video trong bài"
+                      : "URL ảnh trong bài"
+                  }
                   value={b.src || ""}
                   disabled={disabled}
                   onChange={(e) => change(i, "src", e.target.value)}
                 />
                 <ImageInput
+                  video={b.type === "video"}
                   disabled={disabled}
                   value={b.src}
                   onChange={(v) => change(i, "src", v)}
@@ -338,7 +362,7 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
                   Nghiêng
                 </label>
                 <label>
-                  Liên kết HTTP/HTTPS
+                  Liên kết HTTP/HTTPS hoặc trang chi tiết
                   <input
                     disabled={disabled}
                     value={b.href || ""}
@@ -373,7 +397,12 @@ export function DocumentEditor({ value = [], onChange, disabled, legacy }) {
         disabled={disabled}
         onClick={() => {
           setPreview(false);
-          restructure([...value, { type: "paragraph", text: "" }]);
+          const existing = value.length
+            ? value
+            : legacy?.trim()
+              ? [{ type: "paragraph", text: legacy }]
+              : [];
+          restructure([...existing, { type: "paragraph", text: "" }]);
         }}
       >
         Thêm khối nội dung

@@ -28,6 +28,7 @@ export const publicApi = {
     mapApiNewsItem(
       await publicRequest(`/news/${encodeURIComponent(slug)}`, signal),
     ),
+  contentItem: async (id, signal) => mapApiContentCard(await publicRequest(`/content/item/${encodeURIComponent(id)}`, signal)),
   restaurant: (signal) =>
     collection("/content/restaurant", mapApiContentCard, signal),
   cafe: (signal) => collection("/content/cafe", mapApiContentCard, signal),

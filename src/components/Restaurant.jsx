@@ -1,3 +1,5 @@
+import MediaGallery, { UpdatedAt } from "./MediaGallery.jsx";
+import { Link } from "react-router-dom";
 import SafeImage from "./SafeImage.jsx";
 import { SectionHeading } from "./ManagedContent.jsx";
 import { BusinessNotice, useContent } from "./ManagedContent.jsx";
@@ -117,12 +119,9 @@ export function MenuDetail({ card, cards, onMenu, onConsult }) {
         ))}
       </div>
       <div className="menu-detail">
-        <ContentPhoto
-          item={card}
-          className="food-photo menu-detail-photo"
-          label={`Ảnh ${card.title}`}
-          as="div"
-        />
+        <MediaGallery item={card} />
+        <UpdatedAt value={card.updatedAt} />
+        <Link className="text-link" to={"/noi-dung/" + card.id}>Xem trang chi tiết</Link>
         <h3>{card.title}</h3>
         <p className="public-text">{card.description}</p>
         {!menu.some((x) => x.isActive) && (

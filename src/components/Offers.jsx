@@ -1,9 +1,9 @@
+import MediaGallery, { UpdatedAt } from "./MediaGallery.jsx";
+import { Link } from "react-router-dom";
 import { SectionHeading } from "./ManagedContent.jsx";
-import SafeImage from "./SafeImage.jsx";
 import { BusinessNotice } from "./ManagedContent.jsx";
 import PublicState from "./PublicState.jsx";
 import ContentAction from "./ContentAction.jsx";
-import { assetUrl } from "../data/data.js";
 export default function Offers({ resource, onOffers }) {
   const cards = resource.data || [];
   return (
@@ -41,13 +41,9 @@ export function OffersDetail({ cards, onConsult }) {
       <BusinessNotice />
       {cards.map((card) => (
         <div className="offer-card" key={card.id}>
-          {assetUrl(card.image) && (
-            <SafeImage
-              className="modal-room-photo"
-              src={assetUrl(card.image)}
-              alt={card.title}
-            />
-          )}
+          <MediaGallery item={card} />
+          <UpdatedAt value={card.updatedAt} />
+          <Link className="text-link" to={"/noi-dung/" + card.id}>Xem trang chi tiết</Link>
           <h3>{card.title}</h3>
           {card.subtitle && <p>{card.subtitle}</p>}
           <p className="public-text">{card.description}</p>

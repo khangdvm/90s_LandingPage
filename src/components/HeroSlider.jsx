@@ -1,7 +1,7 @@
 import { useContent } from "./ManagedContent.jsx";
-import SafeImage from "./SafeImage.jsx";
+import { MediaPlayer, mediaItems } from "./MediaGallery.jsx";
 import { useEffect, useRef, useState } from "react";
-import { assetUrl, contentTarget, externalUrl } from "../data/data.js";
+import { contentTarget, externalUrl } from "../data/data.js";
 
 export function useReducedMotion() {
   const [reduced, setReduced] = useState(
@@ -21,7 +21,16 @@ import PublicState from "./PublicState.jsx";
 
 export default function HeroSlider({ resource, onConsult, reducedMotion }) {
   const content = useContent();
-  const slides = resource.data || [];
+  const slides = (resource.data || []).flatMap((slide) => {
+    const media = mediaItems(slide);
+    return media.length
+      ? media.map((item, i) => ({
+          ...slide,
+          id: `${slide.id}-media-${i}`,
+          activeMedia: item,
+        }))
+      : [slide];
+  });
   const [current, setCurrent] = useState(0);
   const [paused, setPaused] = useState(false);
   const [hovering, setHovering] = useState(false);
@@ -39,7 +48,15 @@ export default function HeroSlider({ resource, onConsult, reducedMotion }) {
   }, []);
 
   useEffect(() => {
-    if (count < 2 || paused || hovering || focused || reducedMotion || !visible)
+    if (
+      count < 2 ||
+      paused ||
+      hovering ||
+      focused ||
+      reducedMotion ||
+      !visible ||
+      slides[current]?.activeMedia?.type === "video"
+    )
       return;
     const timer = window.setTimeout(
       () => setCurrent((value) => (value + 1) % count),
@@ -91,12 +108,17 @@ export default function HeroSlider({ resource, onConsult, reducedMotion }) {
           setFocused(false);
       }}
       onKeyDown={(event) => {
+        if (event.target.tagName === "VIDEO") return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
           event.preventDefault();
           change(current + (event.key === "ArrowLeft" ? -1 : 1));
         }
       }}
       onTouchStart={(event) => {
+        if (event.target.tagName === "VIDEO") {
+          touch.current = null;
+          return;
+        }
         touch.current = {
           x: event.touches[0].clientX,
           y: event.touches[0].clientY,
@@ -122,10 +144,12 @@ export default function HeroSlider({ resource, onConsult, reducedMotion }) {
             aria-roledescription="slide"
             aria-label={`${index + 1} / ${count}`}
           >
-            {assetUrl(slide.image) && (
-              <SafeImage
-                src={assetUrl(slide.image)}
-                alt={slide.eyebrow || slide.title}
+            {slide.activeMedia && (
+              <MediaPlayer
+                key={slide.activeMedia.src}
+                item={slide.activeMedia}
+                active={current === index}
+                className="hero-media"
                 fetchPriority={index === 0 ? "high" : "auto"}
                 loading={index === 0 ? "eager" : "lazy"}
               />

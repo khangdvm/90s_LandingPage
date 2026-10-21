@@ -125,7 +125,7 @@ test("admin creates/reorders/disables a promotion slide -> public slider", async
   try {
     await page.goto("/admin/hero");
     await page.getByRole("button", { name: "Thêm slide", exact: true }).click();
-    await page.getByLabel("Tiêu đề", { exact: false }).fill("E2E Ưu đãi CMS");
+    await page.getByLabel(/^Tiêu đề(?: \*)?$/).fill("E2E Ưu đãi CMS");
     await page.getByLabel("Nhãn ưu đãi", { exact: true }).fill("Ưu đãi");
     await page
       .getByLabel("URL hoặc đường dẫn ảnh", { exact: true })
@@ -189,7 +189,7 @@ test("admin publishes news -> category, server pagination and full article modal
     await page
       .getByRole("button", { name: "Viết bài mới", exact: true })
       .click();
-    await page.getByLabel("Tiêu đề", { exact: false }).fill(title);
+    await page.getByLabel(/^Tiêu đề(?: \*)?$/).fill(title);
     await page
       .getByLabel("Đường dẫn (slug)", { exact: false })
       .fill(`e2e-cms-news-${Date.now()}`);
@@ -267,11 +267,18 @@ test("admin contacts, address/map and SEO -> footer and consultation", async ({
 }) => {
   const config = await read(request, "site-config");
   try {
+    await patch(request, "site-config", {
+      contentConfirmed: "false",
+      businessNotice: "Nội dung mẫu chưa được chủ website xác nhận.",
+    });
     await page.goto("/admin/settings");
     await page.getByLabel("Hotline", { exact: true }).fill("0123456789");
     await page
       .getByLabel("Liên kết Zalo", { exact: true })
       .fill("https://zalo.me/cms-test");
+    await page
+      .getByLabel("Số điện thoại Zalo", { exact: true })
+      .fill("0987654321");
     await page
       .getByLabel("Liên kết Facebook", { exact: true })
       .fill("https://facebook.com/cms-test");
@@ -290,6 +297,8 @@ test("admin contacts, address/map and SEO -> footer and consultation", async ({
     await save(page);
     await publicReady(page);
     await expect(page).toHaveTitle("E2E 90s CMS");
+    await expect(page.getByText(/Nội dung mẫu.*chưa được/)).toHaveCount(0);
+    await expect(page.locator("#demo-info")).toHaveCount(0);
     await expect(page.locator('meta[name="description"]')).toHaveAttribute(
       "content",
       "Mô tả CMS cho kiểm thử",
@@ -302,8 +311,8 @@ test("admin contacts, address/map and SEO -> footer and consultation", async ({
       "https://example.com/cms-map",
     );
     for (const [name, href] of [
-      ["Gọi Hotline", "tel:0123456789"],
-      ["Chat Zalo", "https://zalo.me/cms-test"],
+      ["Gọi Hotline: 0123456789", "tel:0123456789"],
+      ["Chat Zalo: 0987654321", "https://zalo.me/cms-test"],
       ["Facebook", "https://facebook.com/cms-test"],
     ]) {
       const link = page
@@ -324,10 +333,58 @@ test("admin contacts, address/map and SEO -> footer and consultation", async ({
     await expect(
       page
         .getByRole("dialog")
-        .getByRole("link", { name: "Gọi Hotline", exact: true }),
+        .getByRole("link", { name: "Gọi Hotline: 0123456789", exact: true }),
     ).toHaveAttribute("href", "tel:0123456789");
+    await expect(
+      page.getByRole("dialog").getByRole("link", {
+        name: "Chat Zalo: 0987654321",
+        exact: true,
+      }),
+    ).toHaveAttribute("href", "https://zalo.me/cms-test");
+    await page.locator("#close-modal").click();
+    await expect(page.getByText(/Nội dung mẫu.*chưa được/)).toHaveCount(0);
+    await patch(request, "site-config", {
+      zaloPhone: "",
+      zaloUrl: "https://zalo.me/0912345678",
+      businessNotice: "Chào mừng đến 90s Homestay",
+    });
+    await publicReady(page);
+    await expect(
+      page.locator("#footer-contacts").getByRole("link", {
+        name: "Chat Zalo: 0912345678",
+        exact: true,
+      }),
+    ).toHaveAttribute("href", "https://zalo.me/0912345678");
+    await expect(
+      page.getByText("Chào mừng đến 90s Homestay", { exact: true }).first(),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expect(
+      page.locator("#footer-contacts").getByRole("link", {
+        name: "Gọi Hotline: 0123456789",
+        exact: true,
+      }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
   } finally {
-    await patch(request, "site-config", config);
+    await patch(request, "site-config", { zaloPhone: "", ...config });
+    const addedKeys = [
+      "zaloPhone",
+      "contentConfirmed",
+      "businessNotice",
+    ].filter((key) => !(key in config));
+    if (addedKeys.length) {
+      const db = new PrismaClient();
+      try {
+        await db.siteConfig.deleteMany({ where: { key: { in: addedKeys } } });
+      } finally {
+        await db.$disconnect();
+      }
+    }
   }
 });
 test("all four content sections use edited CMS text and menu dishes", async ({
@@ -427,7 +484,12 @@ test("valid empty CMS responses never resurrect demo data", async ({
     await patch(
       request,
       "site-config",
-      Object.fromEntries(Object.keys(config).map((key) => [key, ""])),
+      Object.fromEntries(
+        Object.keys(config).map((key) => [
+          key,
+          key.endsWith("Enabled") || key === "contentConfirmed" ? "true" : "",
+        ]),
+      ),
     );
     await page.goto("/");
     await expect(page.locator("#tin-tuc")).toHaveCount(0);

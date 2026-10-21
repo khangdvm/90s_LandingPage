@@ -30,6 +30,10 @@ test("payload and pagination validation", () => {
   assert.throws(() => payload("content", { title: "x", section: "layout" }));
   assert.throws(() => siteConfig({ unknown: "x" }));
   assert.throws(() => siteConfig({ zaloUrl: "javascript:alert(1)" }));
+  assert.throws(() => siteConfig({ zaloPhone: "---" }));
+  assert.deepEqual(siteConfig({ zaloPhone: "+84 912 345 678" }), {
+    zaloPhone: "+84 912 345 678",
+  });
   for (const q of [
     { page: "0" },
     { limit: "51" },

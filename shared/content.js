@@ -45,7 +45,7 @@ export const target = (v) =>
     v === "#" ||
     external(v) ||
     sectionIds.some((id) => v === "#" + id) ||
-    /^\/(phong|tin-tuc)\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v));
+    /^\/(phong|tin-tuc|noi-dung)\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(v));
 export const phone = (v) =>
   typeof v === "string" &&
   v.length <= 20000 &&
@@ -57,9 +57,10 @@ export const settingDefaults = {
   brandName: "90s Homestay",
   logoUrl: "assets/images/misc/logo.png",
   footerText: "Hẹn nhau ở Tam Đảo",
-  businessNotice: "Nội dung mẫu chưa được chủ website xác nhận.",
-  contentConfirmed: "false",
-  cafeStatus: "Thông tin khu cà phê đang chờ xác nhận",
+  businessNotice: "",
+  contentConfirmed: "true",
+  cafeStatus: "Cà phê tại 90s",
+  zaloPhone: "",
   unpricedLabel: "Liên hệ để biết giá",
 };
 for (const id of sectionIds) {
@@ -110,7 +111,7 @@ export function validDoc(doc) {
     doc.every(
       (b) =>
         b &&
-        ["paragraph", "heading", "list", "image"].includes(b.type) &&
+        ["paragraph", "heading", "list", "image", "video"].includes(b.type) &&
         Object.keys(b).every((k) =>
           ["type", "text", "bold", "italic", "href", "src"].includes(k),
         ) &&
@@ -118,8 +119,12 @@ export function validDoc(doc) {
         b.text.length <= 20000 &&
         (b.bold === undefined || typeof b.bold === "boolean") &&
         (b.italic === undefined || typeof b.italic === "boolean") &&
-        (b.href === undefined || contact(b.href)) &&
-        (b.src === undefined || image(b.src)),
+        (b.href === undefined || target(b.href)) &&
+        (b.type === "image"
+          ? galleryImage(b.src)
+          : b.type === "video"
+            ? video(b.src)
+            : b.src === undefined || image(b.src)),
     )
   );
 }
@@ -143,3 +148,31 @@ export function menuFromNames(names, existing = []) {
     return { ...previous, name, sortOrder };
   });
 }
+
+// Direct, browser-playable files only; embed pages and executable schemes are not media.
+export const video = (value) =>
+  typeof value === "string" &&
+  value.length <= 20000 &&
+  ((external(value) && /\.(mp4|webm)$/i.test(new URL(value).pathname)) ||
+    (/^\/?assets\/[a-zA-Z0-9_./-]+\.(mp4|webm)$/.test(value) &&
+      !value.includes("..")) ||
+    /^\/uploads\/[a-f0-9-]+\.(mp4|webm)$/.test(value));
+export const validMedia = (items) =>
+  Array.isArray(items) &&
+  items.length <= 30 &&
+  items.every(
+    (item) =>
+      item &&
+      typeof item === "object" &&
+      !Array.isArray(item) &&
+      Object.keys(item).every((key) =>
+        ["type", "src", "alt", "poster"].includes(key),
+      ) &&
+      ["image", "video"].includes(item.type) &&
+      (item.type === "image" ? galleryImage(item.src) : video(item.src)) &&
+      typeof item.alt === "string" &&
+      item.alt.length <= 500 &&
+      (item.poster === undefined ||
+        item.poster === "" ||
+        galleryImage(item.poster)),
+  );

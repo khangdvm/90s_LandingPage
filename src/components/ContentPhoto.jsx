@@ -1,3 +1,4 @@
+import { MediaPlayer, mediaItems } from "./MediaGallery.jsx";
 import { useEffect, useState } from "react";
 import { assetUrl } from "../data/data.js";
 const positions = ["0% 0%", "100% 0%", "0% 100%", "100% 100%"];
@@ -7,7 +8,8 @@ export default function ContentPhoto({
   label,
   as: Tag = "span",
 }) {
-  const url = assetUrl(item.image);
+  const primary = mediaItems(item)[0];
+  const url = primary?.type === "image" ? assetUrl(primary.src) : "";
   const [broken, setBroken] = useState(false);
   useEffect(() => {
     setBroken(false);
@@ -34,7 +36,8 @@ export default function ContentPhoto({
           : "center",
       }}
     >
-      {(!url || broken) && (
+      {primary?.type === "video" && <><MediaPlayer key={primary.src} item={primary} preview className="cover-video" /><span className="video-badge">▶ Video</span></>}
+      {primary?.type !== "video" && (!url || broken) && (
         <span className="image-unavailable">Chưa có ảnh</span>
       )}
     </Tag>

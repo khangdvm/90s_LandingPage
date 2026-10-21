@@ -73,13 +73,24 @@ export function contactHref(key, value) {
     return phone(value) ? `tel:${value.replace(/[ ()-]/g, "")}` : "";
   return externalUrl(value);
 }
+function zaloNumber(config) {
+  const explicit = config.zaloPhone?.trim();
+  if (explicit && !explicit.startsWith("PLACEHOLDER_") && phone(explicit))
+    return explicit;
+  const href = contactHref("zalo", config.zaloUrl);
+  if (!href) return "";
+  const url = new URL(href);
+  if (!["zalo.me", "www.zalo.me"].includes(url.hostname)) return "";
+  const number = url.pathname.replace(/^\/|\/$/g, "");
+  return /^\+?\d{3,15}$/.test(number) ? number : "";
+}
 export function ContactLinks({ onPlaceholder }) {
   const CONTACT_INFO = useSiteConfig().data || {};
   return [
-    ["zalo", "Chat Zalo", CONTACT_INFO.zaloUrl],
+    ["zalo", "Chat Zalo", CONTACT_INFO.zaloUrl, zaloNumber(CONTACT_INFO)],
     ["facebook", "Facebook", CONTACT_INFO.facebookUrl],
-    ["hotline", "Gọi Hotline", CONTACT_INFO.hotline],
-  ].map(([key, label, value]) => {
+    ["hotline", "Gọi Hotline", CONTACT_INFO.hotline, CONTACT_INFO.hotline],
+  ].map(([key, label, value, number]) => {
     const href = contactHref(key, value);
     const placeholder = !href;
     return (
@@ -98,7 +109,7 @@ export function ContactLinks({ onPlaceholder }) {
         }}
       >
         {label}
-        {placeholder ? " · Chưa cập nhật" : ""}
+        {placeholder ? " · Chưa cập nhật" : number ? `: ${number}` : ""}
       </a>
     );
   });
@@ -146,8 +157,7 @@ export default function ConsultationModal({ room, type = "room", filters }) {
         ].some((value) => !value)
           ? "Thông tin liên hệ đang chờ cập nhật chính thức. "
           : ""}
-        Giao diện này không gửi yêu cầu tự động. Hãy chia sẻ nhu cầu với nhân
-        viên qua kênh liên hệ khi được cung cấp.
+        Chọn kênh liên hệ để trao đổi lịch trình và nhận tư vấn trực tiếp.
       </p>
       <p id="contact-message" role="status">
         {message}

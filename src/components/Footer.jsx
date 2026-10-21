@@ -1,11 +1,11 @@
 import SafeImage from "./SafeImage.jsx";
-import { useContent, BusinessNotice, SectionIntro } from "./ManagedContent.jsx";
+import { useContent, SectionIntro } from "./ManagedContent.jsx";
 import { assetUrl, externalUrl } from "../data/data.js";
 import { ContactLinks } from "./ConsultationModal.jsx";
 
 import { useSiteConfig } from "../data/SiteConfigContext.jsx";
 import PublicState from "./PublicState.jsx";
-export default function Footer({ onConsult, onInfo }) {
+export default function Footer({ onConsult }) {
   const resource = useSiteConfig();
   const CONTACT_INFO = useContent();
   if (CONTACT_INFO["lien-heEnabled"] === "false") return null;
@@ -80,9 +80,6 @@ export default function Footer({ onConsult, onInfo }) {
             <span>
               © {new Date().getFullYear()} {CONTACT_INFO.brandName}
             </span>
-            <button id="demo-info" onClick={onInfo}>
-              Thông tin nội dung
-            </button>
           </div>
         </div>
       </footer>
@@ -99,7 +96,4 @@ export default function Footer({ onConsult, onInfo }) {
       </div>
     </>
   );
-}
-export function DemoInfo() {
-  return <BusinessNotice />;
 }

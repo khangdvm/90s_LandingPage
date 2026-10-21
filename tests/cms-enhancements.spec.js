@@ -307,7 +307,7 @@ test("rich editor preview, safe rendering, draft/publish/unpublish and stable sl
       .fill("Mục một\nMục hai");
     await page.getByLabel("Nghiêng", { exact: true }).nth(2).check();
     await page
-      .getByLabel("Liên kết HTTP/HTTPS", { exact: true })
+      .getByLabel("Liên kết HTTP/HTTPS hoặc trang chi tiết", { exact: true })
       .nth(2)
       .fill("https://example.com/qa");
     await page

@@ -1,5 +1,5 @@
 import { UploadContext, useUploadState } from "../hooks/useUploads.js";
-import { assetUrl } from "../../data/data.js";
+import { assetUrl, displayDateTime } from "../../data/data.js";
 import { useDraft } from "../hooks/useDraft.jsx";
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -107,6 +107,31 @@ function Editor({ config, item, defaults, busy, onSave, onCancel }) {
           {item ? `Chỉnh sửa ${config.singular}` : config.create}
         </h2>
         <p className="cms-help">Các trường có dấu * là bắt buộc.</p>
+        {item?.updatedAt && (
+          <p className="cms-help">
+            Cập nhật:{" "}
+            <time dateTime={item.updatedAt}>
+              {displayDateTime(item.updatedAt)}
+            </time>
+          </p>
+        )}
+        {item && ["rooms", "news", "content"].includes(config.api) && (
+          <a
+            className="cms-text-button"
+            target="_blank"
+            rel="noopener noreferrer"
+            href={
+              import.meta.env.BASE_URL +
+              (config.api === "rooms"
+                ? "phong/" + item.slug
+                : config.api === "news"
+                  ? "tin-tuc/" + item.slug
+                  : "noi-dung/" + item.id)
+            }
+          >
+            Xem trang công khai (nội dung đã lưu)
+          </a>
+        )}
         <Feedback success={notice} />
         {protection.recovery}
         {protection.dirty && (

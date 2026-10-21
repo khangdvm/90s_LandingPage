@@ -103,19 +103,32 @@ test("plaintext article preview contains the legacy content", async ({
   page,
   request,
 }) => {
-  const rows = await read(request, "news");
-  await page.goto("/admin/news?edit=" + rows[0].id);
-  await expect(
-    page.getByLabel("Nội dung bài viết", { exact: true }),
-  ).toBeVisible();
-  const text = await page
-    .getByLabel("Nội dung bài viết", { exact: true })
-    .inputValue();
-  expect(text.length).toBeGreaterThan(0);
-  await page
-    .getByRole("button", { name: "Xem trước bài viết", exact: true })
-    .click();
-  await expect(page.locator(".cms-stack .public-text")).toHaveText(text);
+  const text = "Văn bản cũ cần hiển thị đủ trong phần xem trước.";
+  const response = await request.post(api + "/api/admin/news", {
+    headers: auth(),
+    data: {
+      title: "QA Legacy preview",
+      slug: "qa-legacy-preview-" + Date.now(),
+      category: "90s",
+      content: text,
+    },
+  });
+  expect(response.status()).toBe(201);
+  const article = await response.json();
+  try {
+    await page.goto("/admin/news?edit=" + article.id);
+    await expect(
+      page.getByLabel("Nội dung bài viết", { exact: true }),
+    ).toHaveValue(text);
+    await page
+      .getByRole("button", { name: "Xem trước bài viết", exact: true })
+      .click();
+    await expect(page.locator(".cms-stack .public-text")).toHaveText(text);
+  } finally {
+    await request.delete(api + "/api/admin/news/" + article.id, {
+      headers: auth(),
+    });
+  }
 });
 test("real upload cannot be bypassed by preview and does not lose other edits", async ({
   page,
@@ -643,7 +656,7 @@ test("a hero CTA with a legacy placeholder opens consultation instead of a dead 
       .click();
     await expect(page.getByRole("dialog")).toContainText("Nhận tư vấn");
     await expect(page.getByRole("dialog")).toContainText(
-      "Giao diện này không gửi yêu cầu tự động.",
+      "Chọn kênh liên hệ để trao đổi lịch trình và nhận tư vấn trực tiếp.",
     );
   } finally {
     await patch(request, "hero-slides/" + slide.id, {

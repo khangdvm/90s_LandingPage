@@ -4,7 +4,7 @@ import {
   MenuEditor,
   DocumentEditor,
 } from "./ContentEditors.jsx";
-import ImagePreview from "./ImagePreview.jsx";
+import MediaEditor from "./MediaEditor.jsx";
 export default function FormField({
   field,
   value,
@@ -26,6 +26,7 @@ export default function FormField({
   if (field.key === "q") return null;
   const special = {
     gallery: GalleryEditor,
+    media: MediaEditor,
     menu: MenuEditor,
     document: DocumentEditor,
   };

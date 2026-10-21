@@ -1,11 +1,18 @@
-import { readStayPreferences } from "../data/publicPreferences.js";
+import MediaGallery, { UpdatedAt, mediaItems } from "./MediaGallery.jsx";
 import SafeImage from "./SafeImage.jsx";
+import {
+  contentTarget,
+  externalUrl,
+  money,
+  displayDateTime,
+} from "../data/data.js";
+import { readStayPreferences } from "../data/publicPreferences.js";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import { publicApi } from "../api/publicApi.js";
 import { usePublicResource } from "../hooks/usePublicResource.js";
 import { SiteConfigContext } from "../data/SiteConfigContext.jsx";
-import { assetUrl, displayDate } from "../data/data.js";
+import { assetUrl } from "../data/data.js";
 import { RoomDetails } from "./Rooms.jsx";
 import RichDocument from "./RichDocument.jsx";
 import Header from "./Header.jsx";
@@ -36,6 +43,10 @@ function Metadata({ data, kind, brand = "90s Homestay" }) {
     document
       .querySelector('meta[name="description"]')
       ?.setAttribute("content", description);
+    const cover = mediaItems(data)[0];
+    const coverImage = assetUrl(
+      cover?.type === "image" ? cover.src : cover?.poster || data.image,
+    );
     const nodes = [];
     for (const [prop, value] of Object.entries({
       "og:title": title,
@@ -45,9 +56,7 @@ function Metadata({ data, kind, brand = "90s Homestay" }) {
         import.meta.env.BASE_URL.replace(/\/$/, "") +
         pathname,
       "og:type": kind === "news" ? "article" : "website",
-      "og:image": assetUrl(data.image)
-        ? new URL(assetUrl(data.image), location.origin).href
-        : "",
+      "og:image": coverImage ? new URL(coverImage, location.origin).href : "",
     })) {
       if (!value) continue;
       const el = document.createElement("meta");
@@ -80,7 +89,9 @@ export default function DetailPage({ kind }) {
     (signal) =>
       kind === "room"
         ? publicApi.room(slug, signal)
-        : publicApi.newsItem(slug, signal),
+        : kind === "content"
+          ? publicApi.contentItem(slug, signal)
+          : publicApi.newsItem(slug, signal),
     [kind, slug],
   );
   const resource = usePublicResource(loader);
@@ -111,33 +122,100 @@ export default function DetailPage({ kind }) {
                 brand={config.data?.brandName || "90s Homestay"}
               />
               <h1>{data.name || data.title}</h1>
-              {(!config.data || config.data.contentConfirmed !== "true") && (
-                <p className="form-notice">Nội dung mẫu / chưa được xác nhận</p>
-              )}
               {kind === "room" ? (
                 <RoomDetails
                   room={data}
                   onConsult={() => setContact(true)}
                   onAllRooms={() => {
-                    location.href = import.meta.env.BASE_URL + "#phong-nghi";
+                    window.location.assign(
+                      import.meta.env.BASE_URL + "#phong-nghi",
+                    );
                   }}
                 />
               ) : (
                 <>
-                  <time dateTime={data.publishedAt}>
-                    {displayDate(data.publishedAt)}
-                  </time>
-                  {assetUrl(data.image) && (
-                    <SafeImage
-                      className="article-photo"
-                      src={assetUrl(data.image)}
-                      alt={data.title}
-                    />
+                  {data.subtitle && (
+                    <p className="detail-subtitle">{data.subtitle}</p>
                   )}
+                  {data.publishedAt && (
+                    <p>
+                      Ngày đăng:{" "}
+                      <time dateTime={data.publishedAt}>
+                        {displayDateTime(data.publishedAt)}
+                      </time>
+                    </p>
+                  )}
+                  <UpdatedAt value={data.updatedAt} />
+                  <MediaGallery item={data} />
                   <RichDocument
                     blocks={data.contentDoc}
-                    legacy={data.content || data.excerpt}
+                    legacy={data.content || data.description || data.excerpt}
                   />
+                  {kind === "content" && (
+                    <>
+                      {data.menuItems?.filter((item) => item.isActive).length >
+                        0 && (
+                        <ul className="menu-dishes">
+                          {data.menuItems
+                            .filter((item) => item.isActive)
+                            .sort((a, b) => a.sortOrder - b.sortOrder)
+                            .map((item, i) => (
+                              <li key={i}>
+                                <div>
+                                  {assetUrl(item.imageUrl) && (
+                                    <SafeImage
+                                      className="menu-thumbnail"
+                                      src={assetUrl(item.imageUrl)}
+                                      alt={item.name}
+                                    />
+                                  )}
+                                  <strong>{item.name}</strong>
+                                  <p>{item.description}</p>
+                                </div>
+                                <span>
+                                  {item.price === null
+                                    ? config.data?.unpricedLabel ||
+                                      "Liên hệ để biết giá"
+                                    : money(item.price)}{" "}
+                                  {item.unit ? " / " + item.unit : ""}
+                                </span>
+                              </li>
+                            ))}
+                        </ul>
+                      )}
+                      {data.section === "restaurant" &&
+                        !data.menuItems?.some((item) => item.isActive) && (
+                          <p>Chưa có món được công khai trong nhóm này.</p>
+                        )}
+                      {contentTarget(data.ctaTarget) &&
+                        data.ctaTarget !== `/noi-dung/${data.id}` && (
+                          <a
+                            className="button outline"
+                            href={
+                              data.ctaTarget.startsWith("#")
+                                ? import.meta.env.BASE_URL + data.ctaTarget
+                                : contentTarget(data.ctaTarget)
+                            }
+                            target={
+                              externalUrl(data.ctaTarget) ? "_blank" : undefined
+                            }
+                            rel={
+                              externalUrl(data.ctaTarget)
+                                ? "noopener noreferrer"
+                                : undefined
+                            }
+                          >
+                            {data.ctaText || "Khám phá thêm"}
+                          </a>
+                        )}
+                      <button
+                        className="button"
+                        onClick={() => setContact(true)}
+                      >
+                        Nhận tư vấn
+                      </button>
+                    </>
+                  )}
                 </>
               )}
             </>
@@ -151,7 +229,11 @@ export default function DetailPage({ kind }) {
           >
             <ConsultationModal
               room={kind === "room" ? data : null}
-              type="room"
+              type={
+                kind === "content" && data?.section === "restaurant"
+                  ? "table"
+                  : "room"
+              }
               filters={stay}
             />
           </Modal>

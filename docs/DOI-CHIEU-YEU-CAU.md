@@ -7,7 +7,7 @@ Nguồn: checkout hiện có `/workspace/90s_LandingPage`, giữ React/Vite, Exp
 | 1. Giữ nền tảng, dữ liệu | Migration cộng thêm; seed upsert `update: {}`; không reset                                                                                                         | Test schema cũ → migration mới và cài mới trên DB riêng; không chạy trên production                                                                                                                   |
 | 2. URL đúng mục đích     | `shared/content.js` dùng ở frontend, backend và renderer; ảnh khác CTA, liên hệ, điện thoại                                                                        | Regression ba lỗi Zalo/ảnh/CTA, scheme nguy hiểm, traversal, URL có credentials                                                                                                                       |
 | 3. Upload                | `server/src/routes/uploads.js`; `ContentEditors.jsx`; JPEG/PNG/WebP ≤8 MB; Sharp giải mã, giới hạn 40 triệu pixel, xoay/resize/tái mã hóa WebP; UUID; API xác thực | API kiểm tra chưa đăng nhập, giả ảnh, SVG, quá dung lượng, ảnh thật + header CORP; browser upload/preview/gallery; không có tự xóa file                                                               |
-| 4. Phạm vi CMS           | Settings: thương hiệu/logo/footer/section/thông báo/cà phê/trạng thái xác nhận; section rỗng hoặc tắt được bỏ khỏi nav                                             | Browser sửa section/brand/notice, tắt cà phê, section rỗng; nhãn mẫu mặc định bật. Xác nhận áp dụng toàn website, không theo từng bản ghi                                                             |
+| 4. Phạm vi CMS           | Settings: thương hiệu/logo/footer/section/thông báo/cà phê/trạng thái xác nhận; section rỗng hoặc tắt được bỏ khỏi nav                                             | Browser sửa section/brand/notice, tắt cà phê, section rỗng; nhãn mẫu đã gỡ theo yêu cầu bàn giao; thông báo kinh doanh riêng vẫn hiển thị                                                             |
 | 5. Bài viết              | Editor các khối heading/paragraph/list/image, đậm/nghiêng/liên kết và preview; React render văn bản, không inject HTML                                             | Browser preview chuỗi script không thực thi, đăng/gỡ đăng, slug ổn định; API chặn liên kết nguy hiểm. Định dạng theo khối, không phải trình xử lý văn bản đầy đủ; ngày chỉ để hiển thị, không hẹn giờ |
 | 6. Thực đơn              | `menuItems` JSON có tên/giá nullable/đơn vị/mô tả/ảnh/hiển thị/thứ tự; migration chuyển `dishes` giữ tên gốc                                                       | API và browser phân biệt null/0; editor thêm/xóa/đưa lên; dữ liệu cũ `dishes` còn nguyên                                                                                                              |
 | 7. Detail và 404         | `/phong/:slug`, `/tin-tuc/:slug`, gallery, API chỉ lấy active/published; metadata/canonical                                                                        | Browser direct URL/refresh/Back, room ẩn, news nháp, đường dẫn sai; CSR cần hosting fallback, social crawler có thể không chạy JS                                                                     |
@@ -36,7 +36,7 @@ Nguồn: checkout hiện có `/workspace/90s_LandingPage`, giữ React/Vite, Exp
 | Tin category/title/slug/excerpt/body/ảnh/date/link/nháp                               | Tin tức                                    | Body cũ nguyên văn, khối mới được ưu tiên nếu có                                         |
 | Hotline/Zalo/Facebook/địa chỉ/map                                                     | Cài đặt                                    | Placeholder không thành link hoạt động                                                   |
 | Footer giới thiệu                                                                     | Cài đặt → Nội dung footer                  | Copyright theo năm + thương hiệu                                                         |
-| Cảnh báo mẫu/thông báo kinh doanh                                                     | Cài đặt → Trạng thái xác nhận, Thông báo   | Mặc định chưa xác nhận; chỉ chủ website quyết định chuyển trạng thái                     |
+| Cảnh báo mẫu/thông báo kinh doanh                                                     | Cài đặt → Trạng thái xác nhận, Thông báo   | Nhãn mẫu đã gỡ; thông báo kinh doanh riêng vẫn quản lý từ CMS                     |
 | Nhãn nút UI (Lưu, Hủy, Nhận tư vấn...), hướng dẫn sử dụng, bộ lọc view, nhãn thống kê | Mã ứng dụng                                | Đây là UI ổn định, không cho sửa HTML/CSS hoặc pagebuilder                               |
 
 ## Bổ sung sau đợt rà soát hành trình sử dụng
@@ -59,3 +59,11 @@ Các ca tái hiện nằm trong `tests/workflow-audit.spec.js`, dùng API/Postgr
 | Nav ở detail dẫn tới section rỗng                                                 | Public config tính trạng thái hiển thị thực tế, không sửa cấu hình admin; lỗi một nguồn không làm mất thông tin liên hệ                             |
 
 Ngoài ra đã kiểm tra bản nháp tách giữa hai tài khoản admin, đăng nhập/hết phiên, API không có bản ghi, upload file hỏng, retry sau mất mạng, thứ tự/ẩn món, đóng modal bằng Escape và phục hồi focus. Không bổ sung nghiệp vụ đặt phòng hoặc lưu yêu cầu tư vấn.
+
+## Bổ sung nội dung và media
+
+- Phụ đề phòng/tin; media JSON cho phòng/hero/tin/thẻ nội dung. Không xóa cột ảnh/gallery cũ.
+- Bộ ảnh/video sắp xếp được, chú thích/poster, tải MP4/WebM có kiểm tra file thật; phát video có điều khiển và HTTP Range.
+- Trang nội dung `/noi-dung/:id`, CTA sang phòng/tin/nội dung, thời gian cập nhật và preview công khai trong CMS.
+- 16 bài có thân bài, tiêu đề/phụ đề/ảnh/liên kết. Migration chỉ nâng cấp dữ liệu seed mặc định hoặc trường trống, giữ bản đã biên tập.
+- Hotline/Zalo hiển thị số theo cấu hình, Facebook giữ nguyên; nhãn mẫu đã gỡ theo yêu cầu.

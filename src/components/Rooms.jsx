@@ -1,3 +1,4 @@
+import MediaGallery, { UpdatedAt } from "./MediaGallery.jsx";
 import { SectionHeading } from "./ManagedContent.jsx";
 import { BusinessNotice } from "./ManagedContent.jsx";
 import { assetUrl } from "../data/data.js";
@@ -170,38 +171,47 @@ export default function Rooms({
   );
 }
 export function RoomDetails({ room, onConsult, onAllRooms }) {
+  const hasMedia = Array.isArray(room.media) && room.media.length > 0;
   const images = [room.image, ...(room.gallery || [])].filter(
     (v, i, a) => v && a.indexOf(v) === i,
   );
   const [selected, setSelected] = useState(0);
   return (
     <>
-      <Photo
-        room={{
-          ...room,
-          image: images[selected] || room.image,
-          q: selected === 0 ? room.q : 0,
-        }}
-        className="modal-room-photo"
-      />
-      <div className="room-gallery" role="group" aria-label="Gallery phòng">
-        {images.map((image, i) => (
-          <button
-            key={i}
-            onClick={() => setSelected(i)}
-            aria-label={`Xem ảnh phòng ${i + 1}`}
-            aria-pressed={i === selected}
-          >
-            <img
-              src={assetUrl(image)}
-              alt={`Ảnh ${i + 1}`}
-              onError={(e) => {
-                e.currentTarget.alt = "Ảnh không tải được";
-              }}
-            />
-          </button>
-        ))}
-      </div>
+      {hasMedia ? (
+        <MediaGallery item={room} />
+      ) : (
+        <>
+          <Photo
+            room={{
+              ...room,
+              image: images[selected] || room.image,
+              q: selected === 0 ? room.q : 0,
+            }}
+            className="modal-room-photo"
+          />
+          <div className="room-gallery" role="group" aria-label="Gallery phòng">
+            {images.map((image, i) => (
+              <button
+                key={i}
+                onClick={() => setSelected(i)}
+                aria-label={`Xem ảnh phòng ${i + 1}`}
+                aria-pressed={i === selected}
+              >
+                <img
+                  src={assetUrl(image)}
+                  alt={`Ảnh ${i + 1}`}
+                  onError={(e) => {
+                    e.currentTarget.alt = "Ảnh không tải được";
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+      {room.subtitle && <p className="detail-subtitle">{room.subtitle}</p>}
+      <UpdatedAt value={room.updatedAt} />
       <div className="detail-stats">
         <div>
           <strong>{String(room.count).padStart(2, "0")} phòng</strong>

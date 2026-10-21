@@ -3,7 +3,9 @@ import { publicApi } from "../api/publicApi.js";
 import { usePublicResource } from "../hooks/usePublicResource.js";
 import { RoomDetails } from "./Rooms.jsx";
 import PublicState from "./PublicState.jsx";
-import { assetUrl, displayDate } from "../data/data.js";
+import { displayDateTime } from "../data/data.js";
+import MediaGallery, { UpdatedAt } from "./MediaGallery.jsx";
+import RichDocument from "./RichDocument.jsx";
 export function RoomDetail({ room, onConsult, onAllRooms }) {
   const loader = useCallback(
     (signal) => publicApi.room(room.slug, signal),
@@ -31,19 +33,18 @@ export function ArticleDetail({ slug }) {
   const article = resource.data;
   return (
     <>
-      {assetUrl(article.image) && (
-        <img
-          className="modal-room-photo article-photo"
-          src={assetUrl(article.image)}
-          alt={article.title}
-        />
-      )}
+      <MediaGallery item={article} />
+      {article.subtitle && <p>{article.subtitle}</p>}
+      <UpdatedAt value={article.updatedAt} />
       <p>
         <time dateTime={article.publishedAt}>
-          {displayDate(article.publishedAt)}
+          {displayDateTime(article.publishedAt)}
         </time>
       </p>
-      <p className="public-text">{article.content || article.excerpt}</p>
+      <RichDocument
+        blocks={article.contentDoc}
+        legacy={article.content || article.excerpt}
+      />
     </>
   );
 }

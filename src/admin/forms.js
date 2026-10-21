@@ -1,6 +1,7 @@
 import {
   image as validImage,
   galleryImage,
+  validMedia,
   menuFromNames,
   contact,
   target,
@@ -86,6 +87,7 @@ export const resources = {
     fields: [
       text("name", "Tên phòng", { required: true }),
       slug,
+      text("subtitle", "Tiêu đề phụ"),
       description,
       number("price", "Giá tham khảo (VND)"),
       number("maxGuests", "Sức chứa tối đa", 1),
@@ -99,6 +101,7 @@ export const resources = {
         hint: "Thông tin mô tả của hạng phòng; không dùng để kiểm tra phòng trống.",
       }),
       image,
+      { key: "media", label: "Ảnh và video", type: "media" },
 
       sort,
       active,
@@ -117,6 +120,7 @@ export const resources = {
       { ...title, type: "textarea" },
       description,
       image,
+      { key: "media", label: "Ảnh và video", type: "media" },
       text("badge", "Nhãn ưu đãi", {
         hint: "Ví dụ: Ưu đãi. Để trống nếu không cần nhãn.",
       }),
@@ -135,16 +139,18 @@ export const resources = {
     defaults: { category: "90s", isPublished: false, href: "#" },
     fields: [
       title,
+      text("subtitle", "Tiêu đề phụ"),
       slug,
       select("category", "Chuyên mục", categories),
       text("excerpt", "Tóm tắt", { type: "textarea" }),
       text("content", "Nội dung bài viết", {
         type: "textarea",
         large: true,
-        hint: "Nội dung văn bản thuần; không nhập HTML.",
+        hint: "Hiển thị khi chưa có khối định dạng. Với bài đã có khối, sửa nội dung trong phần soạn định dạng bên dưới; không nhập HTML.",
       }),
       { key: "contentDoc", label: "Soạn bài có định dạng", type: "document" },
       image,
+      { key: "media", label: "Ảnh và video", type: "media" },
       text("href", "Liên kết bài viết", {
         url: true,
         hint: "Giữ # nếu bài viết không có đường dẫn bên ngoài.",
@@ -179,6 +185,7 @@ export const resources = {
       text("subtitle", "Tiêu đề phụ"),
       description,
       image,
+      { key: "media", label: "Ảnh và video", type: "media" },
       ...cta,
 
       { key: "menuItems", label: "Thực đơn", type: "menu" },
@@ -192,6 +199,9 @@ export const settingFields = [
     hint: "Số điện thoại chính thức hoặc placeholder hiện tại.",
   }),
   text("zaloUrl", "Liên kết Zalo", { url: true }),
+  text("zaloPhone", "Số điện thoại Zalo", {
+    hint: "Số hiển thị trên nút Zalo. Để trống để lấy số từ liên kết zalo.me nếu có.",
+  }),
   text("facebookUrl", "Liên kết Facebook", { url: true }),
   text("address", "Địa chỉ"),
   text("mapUrl", "Liên kết bản đồ", { url: true }),
@@ -203,10 +213,6 @@ settingFields.push(
   text("logoUrl", "URL logo", { url: true }),
   text("footerText", "Nội dung footer", { type: "textarea" }),
   text("businessNotice", "Thông báo kinh doanh", { type: "textarea" }),
-  select("contentConfirmed", "Trạng thái xác nhận toàn bộ nội dung", [
-    ["false", "Dữ liệu mẫu / chưa xác nhận"],
-    ["true", "Chủ website đã xác nhận toàn bộ"],
-  ]),
   text("cafeStatus", "Trạng thái khu cà phê"),
   text("unpricedLabel", "Nhãn món chưa có giá"),
 );
@@ -247,7 +253,7 @@ export function draftFor(config, row) {
       const value = values[field.key];
       return [
         field.key,
-        ["gallery", "menu", "document"].includes(field.type)
+        ["gallery", "menu", "document", "media"].includes(field.type)
           ? Array.isArray(value)
             ? value
             : []
@@ -295,7 +301,7 @@ export function validateDraft(fields, draft) {
     )
       errors[field.key] =
         "Liên kết sai mục đích: ảnh dùng assets/, /uploads/ hoặc HTTP/HTTPS; liên hệ dùng HTTP/HTTPS; CTA dùng section hoặc trang chi tiết.";
-    else if (field.key === "hotline" && !phone(value))
+    else if (["hotline", "zaloPhone"].includes(field.key) && !phone(value))
       errors[field.key] = "Số điện thoại không hợp lệ.";
     else if (
       field.type === "datetime-local" &&
@@ -314,6 +320,9 @@ export function validateDraft(fields, draft) {
       (value.length > 30 || !value.every(galleryImage))
     )
       errors[field.key] = "Gallery cần ảnh hợp lệ, tối đa 30 ảnh.";
+    else if (field.type === "media" && !validMedia(value))
+      errors[field.key] =
+        "Kiểm tra ảnh/video: tối đa 30 mục, video MP4/WebM, mỗi mục cần đường dẫn hợp lệ.";
     else if (field.type === "menu" && !validMenu(value))
       errors[field.key] = "Kiểm tra tên, giá và ảnh từng món.";
     else if (field.type === "document" && !validDoc(value))

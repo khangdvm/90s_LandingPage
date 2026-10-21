@@ -25,6 +25,7 @@ const router = createBrowserRouter(
     { path: "/", element: <PublicSite /> },
     { path: "/phong/:slug", element: <DetailPage kind="room" /> },
     { path: "/tin-tuc/:slug", element: <DetailPage kind="news" /> },
+    { path: "/noi-dung/:slug", element: <DetailPage kind="content" /> },
     { path: "*", element: <NotFound /> },
   ],
   { basename: base.startsWith("/") ? base : "/" },

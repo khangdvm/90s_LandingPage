@@ -1,3 +1,4 @@
+import MediaGallery from "./MediaGallery.jsx";
 import { SectionIntro } from "./ManagedContent.jsx";
 import SafeImage from "./SafeImage.jsx";
 import { assetUrl } from "../data/data.js";
@@ -46,7 +47,7 @@ export default function About({ resource, onConsult }) {
                   </ContentAction>
                 )}
               </div>
-              {assetUrl(card.image) && (
+              {card.media?.length > 0 ? <MediaGallery item={card} /> : assetUrl(card.image) && (
                 <SafeImage
                   className="about-watermark"
                   src={assetUrl(card.image)}

@@ -1,50 +1,41 @@
 # Kết quả kiểm thử — 21/10/2026
 
-Nguồn checkout đang sửa, Node.js 24.19, Prisma 6.19.3, PostgreSQL 17.11 và Chromium hệ thống. Không dùng database production. Dữ liệu tài khoản/secret test nằm ngoài repository và không nằm trong ZIP.
+Node.js 24.19, Prisma 6.19.3, PostgreSQL 17.11 và Chromium hệ thống. API thật và production preview; không dùng database production, không giả response thành công. Tài khoản/secret test nằm ngoài repository.
 
-| Kiểm tra                           | Kết quả thực tế                                                                                                                               |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| Cài dependency backend             | Thành công, cập nhật lockfile cho Multer và Sharp                                                                                             |
-| `prisma validate`                  | Đạt                                                                                                                                           |
-| `prisma generate`                  | Đạt, Prisma Client 6.19.3                                                                                                                     |
-| Nâng cấp schema cũ                 | Đạt trên `cms_upgrade_20261021_test`: áp dụng migration cũ, seed mẫu, rồi migration mới; không reset                                          |
-| Bảo toàn dữ liệu sau nâng cấp      | 4 phòng, 3 hero, 16 bài và 4 nhóm nhà hàng còn nguyên số lượng; tất cả tên món được chuyển sang menuItems, giá vẫn null; dishes cũ còn nguyên |
-| Cài mới cả 2 migration + seed      | Đạt trên `cms_delivery_20261021_test`                                                                                                         |
-| `prisma migrate status`            | Database up to date, đủ 2 migration                                                                                                           |
-| `prisma migrate diff --exit-code`  | No difference detected, mã thoát 0                                                                                                            |
-| Backend test có `RUN_DB_TESTS=1`   | **20 passed, 0 failed, 0 skipped**                                                                                                            |
-| Frontend production build          | **Đạt**, Vite 7.3.7, API test cổng 3100                                                                                                       |
-| Playwright trên production preview | **48 passed, 0 failed, 0 skipped**, 3,4 phút, 1 worker                                                                                        |
-| `git diff --check`                 | Đạt                                                                                                                                           |
-| ZIP                                | Kiểm tra tính toàn vẹn và danh mục loại trừ sau đóng gói; không chứa env thật/Git/node_modules/dist/uploads/test-results                      |
+| Kiểm tra | Kết quả |
+| --- | --- |
+| Prisma validate/generate | Đạt, Prisma Client 6.19.3 |
+| Schema/database diff | No difference detected, mã thoát 0 |
+| Cài mới | 4 migration + seed trên `cms_media_install_20261021_test` |
+| Nâng cấp từ bản cũ | `cms_media_upgrade_test`: 4 phòng/3 slide/16 bài/10 thẻ còn nguyên; bài mặc định được điền nội dung |
+| Giữ chỉnh sửa riêng | Giữ title/body/excerpt/image/contentDoc của bài đã sửa và thông báo kinh doanh riêng |
+| Backend, RUN_DB_TESTS=1 | **22 passed, 0 failed, 0 skipped** |
+| Frontend production build | Đạt, Vite 7.3.7; API test cổng 3100 |
+| Playwright tổng thể | 52/53 đạt; ca còn lại kiểm tra câu tư vấn cũ, đã cập nhật assertion |
+| Playwright xác minh sau chỉnh cuối | **11 passed, 0 failed, 0 skipped** trên build cuối |
+| Phạm vi trình duyệt | **54 ca độc nhất có kết quả đạt**, gộp lượt tổng thể và lượt chạy lại các luồng bị ảnh hưởng |
+| git diff --check | Đạt |
 
-## Các luồng đã thực sự chạy
+## Các luồng được kiểm tra
 
-- `/api/health`, đăng nhập đúng/sai, JWT không hợp lệ/hết hạn, route admin được bảo vệ, CORS, malformed JSON và lỗi database không lộ chi tiết.
-- CRUD phòng/hero/tin/thẻ nội dung; bật/tắt/đăng/gỡ đăng; public phản ánh thay đổi; thứ tự và phân trang theo category.
-- Regression Zalo anchor, ảnh anchor, CTA assets; scheme nguy hiểm, traversal và URL credentials bị chặn.
-- API upload chưa xác thực, file giả ảnh, SVG và file >8 MB bị từ chối; ảnh PNG thật được chuyển WebP; HTTP ảnh trả CORP cross-origin.
-- Browser chọn file thật, preview, ảnh chính/gallery, đổi thứ tự, chọn ảnh đại diện, trang detail và refresh/Back/canonical/404/phòng ẩn.
-- Rich editor heading/đoạn đậm/danh sách nghiêng/link/ảnh và preview; chuỗi script vẫn là văn bản, không chạy JS; nháp không lộ public; slug bản ghi đã đăng không tự đổi khi sửa tiêu đề.
-- Thực đơn giá null và 0, chỉnh sửa từ CMS ra public; nhãn thiếu giá quản lý trong settings.
-- Bật/tắt section và nav, thương hiệu/footer/thông báo/tiêu đề quản lý từ settings; xác nhận dữ liệu mẫu là hành động rõ ràng của chủ website.
-- Draft refresh, login sau 401 thực tế, điều hướng chấp nhận/từ chối, xung đột settings không ghi đè. Kiểm tra thêm timer JWT sau 2 giờ bằng đồng hồ trình duyệt điều khiển; API vẫn là backend thật, không mock.
-- Tìm kiếm/lọc/phân trang server từ UI; xóa bản ghi cuối trang 2 tự về trang 1.
-- Mobile 320/375, tablet 768 và desktop 1440 px: form/table/gallery/menu/modal, nội dung dài, ảnh 404 thật, nhiều phòng; sidebar tối đa 3 phòng và modal xem tất cả đầy đủ.
-- Section rỗng không khôi phục fixture; lỗi DB thật (đổi tên bảng tạm trên DB test) có trạng thái lỗi và retry; hero giữ keyboard/swipe/pause/autoplay/reduced motion.
+- Health, đăng nhập đúng/sai, bảo vệ route, 401/JWT hết hạn, CORS và lỗi không lộ thông tin database/filesystem.
+- CRUD phòng/hero/tin/nội dung, bật/tắt/đăng/gỡ đăng, lọc/tìm kiếm/phân trang server, xóa bản ghi cuối trang.
+- Chỉnh sửa đồng thời trả 409, bản nháp theo tài khoản, khôi phục sau refresh/đăng nhập lại, cảnh báo rời trang, Back/Forward khớp URL.
+- Upload ảnh thật, từ chối file giả/SVG/quá kích thước; registry chặn lưu/đổi cấu trúc khi upload; retry không gán file sang mục khác.
+- Upload MP4 H.264 và WebM, từ chối file giả/sai container/quá 50 MB; dọn file tạm. Kiểm tra HTTP Range trả 206 và header media khác origin.
+- Browser giải mã và phát video thật, chuyển ảnh/video, sắp xếp thứ tự từ CMS, mobile 320 px, slider dừng video khi đổi slide, không autoplay tiếng.
+- Video trong bài viết: editor/preview/public; chuyển văn bản cũ thành đoạn khi thêm khối để giữ nội dung. Link trong bài mở hạng phòng hoặc section thật.
+- 16 bài có title/subtitle/excerpt/body/ảnh/link; trang chi tiết hiển thị ngày giờ. Thẻ nội dung có URL riêng, CTA sang phòng và 404 khi ẩn.
+- Menu phân biệt giá trống với giá 0, giữ metadata khi client cũ sửa tên món; xóa hết món không phục hồi danh sách cũ.
+- Hotline/Zalo hiện số, Facebook giữ liên kết; thông báo mẫu cũ được ẩn và thông báo kinh doanh riêng vẫn hiển thị.
+- Section rỗng/tắt bị bỏ khỏi navigation, lỗi nguồn riêng biệt có retry; thiếu ảnh không làm hỏng trang.
+- Khôi phục bản nháp từ trước khi có trường media/subtitle: giữ nội dung đã soạn, dùng giá trị hiện tại cho trường mới, bỏ trường không còn sử dụng.
+- Giữ ngày/số khách khi xem phòng/tư vấn/Back, giữ chuyên mục/trang tin khi trở lại. Responsive admin và public, bàn phím/swipe/giảm chuyển động.
 
-Đợt rà soát bổ sung có 19 ca trong `tests/workflow-audit.spec.js`: xóa sạch món, Back/Forward admin, preview văn bản cũ, upload đang chờ/mạng lỗi/retry/đổi thứ tự, giữ dữ liệu vừa nhập, phân biệt nháp hai tài khoản, nhiều lần lưu cấu hình, bản ghi không tồn tại và retry, CTA không còn đích, menu ở detail khi section rỗng, giữ ngày/số khách sang tư vấn và chuyên mục/trang tin khi quay lại. Hai ca backend bổ sung kiểm tra giữ giá/mô tả khi cập nhật danh sách món cũ và cấu hình được sửa đồng thời.
+## Phạm vi kết luận
 
-Các lỗi ở các vòng đầu đã được sửa; số liệu trên lấy từ vòng kiểm tra hoàn tất sau cùng. Không dùng test skip hoặc API mock để kết luận các luồng chính đã đạt. Ca upload chậm chỉ giữ request rồi chuyển tiếp nguyên bản; backend thật vẫn xác thực/giải mã/lưu file. Lỗi ảnh 404 không trả đường dẫn filesystem.
+Kết quả áp dụng cho Chromium và production preview. Chưa chạy Safari/Firefox/thiết bị thật, kiểm thử tải hoặc kiểm thử thâm nhập; chưa triển khai hosting thực tế. Metadata là CSR, không phải SSR/prerender. Video dùng file MP4/WebM trực tiếp, không nhúng trang YouTube/Facebook. Ngày đăng không tự hẹn giờ xuất bản. Upload cần volume bền vững; không tự xóa media đang lưu. Không bổ sung đặt phòng, thanh toán hoặc lưu yêu cầu tư vấn.
 
-Môi trường có lần đăng nhập chậm vượt thời gian chờ 5 giây của assertion; đã đặt chờ xác nhận 10 giây và chạy lại đầy đủ 48 ca, không bỏ qua nhóm public. Snapshot lỗi có thể chứa giá trị ô mật khẩu; tài khoản test đã được đổi mật khẩu và global teardown che password/JWT secret trong artifact. Bước che đã được xác minh riêng; không dùng tài khoản production.
+Môi trường dùng chung có lần timeout làm cleanup qua browser request bị đóng; cleanup ca hero đã chuyển sang Prisma riêng trên DB test. Fixture bài thuần được tạo riêng thay vì dựa vào bài seed nay đã có định dạng. Test chọn đúng trường title khi thêm subtitle. Artifact lỗi được tự che mật khẩu/JWT secret; không dùng tài khoản production.
 
-## Phần chưa xác minh hoặc giới hạn
-
-- Chưa chạy Safari, Firefox, thiết bị iOS/Android thật, tải lớn hoặc kiểm thử thâm nhập chuyên sâu. Không suy rộng kết quả Chromium thành hỗ trợ mọi trình duyệt.
-- Chưa triển khai lên hosting thật; cấu hình Nginx/HTTPS/volume cần người vận hành áp dụng theo README. Production preview chỉ chứng minh bundle đã build và SPA routes trên preview server hoạt động.
-- CSR chưa đảm bảo social crawler nhận metadata động; HTTP 404 thực tế phụ thuộc hosting. Không có SSR/prerender.
-- Editor định dạng theo khối; không phải trình soạn thảo văn bản đầy đủ. Chưa có hẹn giờ xuất bản.
-- Upload filesystem cần shared volume nếu chạy nhiều replica. Không tự xóa file; dữ liệu ảnh vận hành không đi kèm ZIP mã nguồn.
-- Bản nháp chỉ tồn tại trong localStorage của trình duyệt; xóa dữ liệu trình duyệt hoặc hỏng thiết bị làm mất bản nháp. Cảnh báo đóng tab do trình duyệt quyết định.
-- Dữ liệu kinh doanh chưa được chủ website xác nhận trong đợt phát triển này. Nhãn mẫu mặc định được giữ; xem danh sách xác nhận riêng.
+Lượt cuối bổ sung xác minh ảnh món/giá 0 và tư vấn đúng bữa ăn ở trang nội dung nhà hàng, nút quay về danh sách phòng, liên kết section trong bài, cùng các luồng draft/conflict sau cập nhật hook khôi phục. Không bỏ qua ca lỗi để kết luận hoàn tất.

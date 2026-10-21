@@ -62,7 +62,7 @@ test(
         }
         assert.deepEqual(
           Object.fromEntries(
-            (await db.siteConfig.findMany()).map((x) => [x.key, x.value]),
+            (await db.siteConfig.findMany({ where: { key: { in: Object.keys(configData) } } })).map((x) => [x.key, x.value]),
           ),
           configData,
         );
